@@ -8,8 +8,11 @@
 #include "libclipboard.h"
 #include <windows.h>
 
+/** Win32 Implementation of the clipboard context **/
 struct clipboard_c {
+    /** Implement thread (not process) safety on context access **/
     CRITICAL_SECTION cs;
+    /** Serial no. of clipboard that's owned by this context **/
     DWORD last_cb_serial;
 };
 
@@ -34,15 +37,21 @@ void clipboard_free(clipboard_c *cb) {
 }
 
 void clipboard_clear(clipboard_c *cb) {
-    if (cb && OpenClipboard(NULL)) {
-        EmptyClipboard();
-
-        EnterCriticalSection(&cb->cs);
-        cb->last_cb_serial = 0;
-        LeaveCriticalSection(&cb->cs);
-
-        CloseClipboard();
+    if (cb == NULL) {
+        return;
     }
+
+    EnterCriticalSection(&cb->cs);
+    if (!OpenClipboard(NULL)) {
+        LeaveCriticalSection(&cb->cs);
+        return;
+    }
+
+    EmptyClipboard();
+    cb->last_cb_serial = 0;
+
+    CloseClipboard();
+    LeaveCriticalSection(&cb->cs);
 }
 
 bool clipboard_has_ownership(clipboard_c *cb) {
@@ -85,6 +94,7 @@ char *clipboard_text(clipboard_c *cb, int *length) {
             free(ret);
             ret = NULL;
         } else if (length) {
+            /* Length excluding the NULL terminator */
             *length = len_actual - 1;
         }
     }
@@ -94,9 +104,9 @@ char *clipboard_text(clipboard_c *cb, int *length) {
     return ret;
 }
 
-void clipboard_set_text(clipboard_c *cb, const char *src, int length) {
-    if (cb == NULL || src == NULL) {
-        return;
+bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
+    if (cb == NULL || src == NULL || length == 0) {
+        return false;
     }
 
     int max_length = strlen(src);
@@ -109,39 +119,34 @@ void clipboard_set_text(clipboard_c *cb, const char *src, int length) {
     int len_required = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src,
                                            length, NULL, 0);
     if (len_required == 0) {
-        return;
+        return false;
     }
 
     HGLOBAL buf = GlobalAlloc(GMEM_MOVEABLE, sizeof(wchar_t) * len_required);
     wchar_t *locked;
     if (buf == NULL || (locked = (wchar_t *)GlobalLock(buf)) == NULL) {
-        return;
+        return false;
     }
     int ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, length,
                                   locked, len_required);
-    if (ret == 0) {
-        GlobalUnlock(buf);
-        GlobalFree(buf);
-        return;
-    }
-
     /* NULL-terminate */
     locked[len_required] = 0;
     GlobalUnlock(buf);
 
-    if (!OpenClipboard(NULL)) {
+    if (ret == 0 || !OpenClipboard(NULL)) {
         GlobalFree(buf);
-        return;
+        return false;
     } else if (SetClipboardData(CF_UNICODETEXT, buf) == NULL) {
         CloseClipboard();
         GlobalFree(buf);
-        return;
+        return false;
     }
 
     EnterCriticalSection(&cb->cs);
     cb->last_cb_serial = GetClipboardSequenceNumber();
     LeaveCriticalSection(&cb->cs);
     CloseClipboard();
+    return true;
 }
 
 #endif /* _WIN32 */

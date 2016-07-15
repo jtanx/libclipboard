@@ -66,7 +66,8 @@ extern bool clipboard_has_ownership(clipboard_c *cb);
  *  \brief Retrieves the text currently held on the clipboard.
  *
  *  \param [in] cb The clipboard to retrieve from
- *  \param [out] length Returns the length of the retrieved data (optional).
+ *  \param [out] length Returns the length of the retrieved data, excluding
+ *                      the NULL terminator (optional).
  *  \return A copy to the retrieved text. This must be free()'d by the user.
  *          Note that the text is encoded in UTF-8 format.
  */
@@ -80,11 +81,9 @@ extern char *clipboard_text(clipboard_c *cb, int *length);
  *  \param [in] length The length of text to be set.
  *
  *  \details If the length parameter is -1, src is treated as a NULL-terminated
- *           string and its length will be determined automatically. The
- *           amount copied to the clipboard is the lesser of 'length' or the
- *           count of characters until the NULL terminator.
+ *           string and its length will be determined automatically.
  */
-extern void clipboard_set_text(clipboard_c *cb, const char *src, int length);
+extern bool clipboard_set_text(clipboard_c *cb, const char *src, int length);
 
 #ifdef __cplusplus
 }
