@@ -15,16 +15,42 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${GCC_COMPILE_FLAGS}")
 endif()
 
+# Include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # Source files
 set(HEADERS
-    libclipboard.h
+    include/libclipboard.h
 )
 
 set(SOURCE
-    clipboard_win32.c
+    src/clipboard_win32.c
 )
 
+# Set the output folders
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Make the library
 add_library(clipboard ${HEADERS} ${SOURCE})
 
-add_executable(lctest test/clipboard_test.c)
-target_link_libraries(lctest clipboard)
+# Testing mode?
+set (test OFF CACHE BOOL "Enable libclipboard unit testing (default:off)")
+if (test)
+    # gtest does not play well with pthreads and mingw
+    if (MINGW)
+        # CMake is case sensitive for 'ON CACHE BOOL'...
+        set(gtest_disable_pthreads ON CACHE BOOL "Disable gtest pthreads (default:on)")
+    endif()
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+    enable_testing()
+    include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()
+
+# Build sample executables?
+set (samples OFF CACHE BOOL "Build libclipboard sample executables (default:off)")
+if (samples)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/samples)
+endif()
