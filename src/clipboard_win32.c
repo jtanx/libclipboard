@@ -32,6 +32,10 @@ clipboard_c *clipboard_new(clipboard_type cb_type, clipboard_opts *cb_opts) {
 }
 
 void clipboard_free(clipboard_c *cb) {
+    if (cb == NULL) {
+        return;
+    }
+
     DeleteCriticalSection(&cb->cs);
     free(cb);
 }
@@ -109,10 +113,7 @@ bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
         return false;
     }
 
-    int max_length = strlen(src);
-    if (length < 0 || length >= max_length) {
-        length = max_length + 1;
-    } else {
+    if (length > 0) {
         length += 1;
     }
 
@@ -123,14 +124,20 @@ bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
     }
 
     HGLOBAL buf = GlobalAlloc(GMEM_MOVEABLE, sizeof(wchar_t) * len_required);
-    wchar_t *locked;
-    if (buf == NULL || (locked = (wchar_t *)GlobalLock(buf)) == NULL) {
+    if (buf == NULL) {
         return false;
     }
+
+    wchar_t *locked;
+    if ((locked = (wchar_t *)GlobalLock(buf)) == NULL) {
+        GlobalFree(buf);
+        return false;
+    }
+
     int ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, length,
                                   locked, len_required);
     /* NULL-terminate */
-    locked[len_required] = 0;
+    locked[len_required - 1] = 0;
     GlobalUnlock(buf);
 
     if (ret == 0 || !OpenClipboard(NULL)) {
@@ -142,10 +149,11 @@ bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
         return false;
     }
 
+    /* CloseClipboard appears to change the sequence number... */
+    CloseClipboard();
     EnterCriticalSection(&cb->cs);
     cb->last_cb_serial = GetClipboardSequenceNumber();
     LeaveCriticalSection(&cb->cs);
-    CloseClipboard();
     return true;
 }
 

@@ -88,7 +88,8 @@ extern char *clipboard_text(clipboard_c *cb, int *length);
  *
  *  \param [in] cb The clipboard to set the text.
  *  \param [in] src The UTF-8 encoded text to be set in the clipboard.
- *  \param [in] length The length of text to be set.
+ *  \param [in] length The length of text to be set (excluding the NULL
+ *                     terminator).
  *
  *  \details If the length parameter is -1, src is treated as a NULL-terminated
  *           string and its length will be determined automatically.
