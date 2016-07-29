@@ -15,9 +15,14 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${GCC_COMPILE_FLAGS}")
 endif()
 
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set (CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -g")
+endif()
+
 # Dependencies
 if (UNIX AND NOT APPLE)
-    find_package (X11 REQUIRED)
+    include (FindPkgConfig)
+    pkg_check_modules(X11 xcb REQUIRED)
     find_package (Threads REQUIRED)
 
     include_directories(${X11_INCLUDE_DIR})

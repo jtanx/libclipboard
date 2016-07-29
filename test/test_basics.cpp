@@ -127,13 +127,13 @@ TEST_F(BasicsTest, TestGetText) {
 
     ret = clipboard_text_ex(cb, &length, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret);
-    ASSERT_EQ(strlen("test"), length);
+    ASSERT_EQ(static_cast<int>(strlen("test")), length);
     free(ret);
 
     clipboard_set_text_ex(cb, "test", 2, LC_CLIPBOARD);
     ret = clipboard_text_ex(cb, &length, LC_CLIPBOARD);
     ASSERT_STREQ("te", ret);
-    ASSERT_EQ(strlen("te"), length);
+    ASSERT_EQ(static_cast<int>(strlen("te")), length);
     free(ret);
 
     clipboard_free(cb);

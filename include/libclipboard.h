@@ -28,6 +28,8 @@ typedef enum clipboard_mode {
 typedef struct clipboard_opts {
     /** Max time (ms) to wait for action to complete (X11 only) **/
     int action_timeout;
+    /** The name of the X11 display (NULL for default - DISPLAY env. var.) **/
+    const char *x11_display_name;
 } clipboard_opts;
 
 /** Opaque data structure for a clipboard context/instance **/

@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    printf("Initted!\n");
     char buf[BUFSIZ];
     while (fgets(buf, BUFSIZ, stdin) && strcmp(buf, "q\n")) {
         if (buf[0] == 'x') {
