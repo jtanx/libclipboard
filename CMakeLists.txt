@@ -15,6 +15,19 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${GCC_COMPILE_FLAGS}")
 endif()
 
+# Dependencies
+if (UNIX AND NOT APPLE)
+    find_package (X11 REQUIRED)
+    find_package (Threads REQUIRED)
+
+    include_directories(${X11_INCLUDE_DIR})
+    link_libraries(${X11_LIBRARIES})
+
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+    set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+endif()
+
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -25,6 +38,8 @@ set(HEADERS
 
 set(SOURCE
     src/clipboard_win32.c
+    src/clipboard_x11.c
+    src/clipboard_common.c
 )
 
 # Set the output folders

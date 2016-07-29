@@ -38,6 +38,7 @@ CMakeFiles/
 Testing/
 Makefile
 cmake_install.cmake
-CTestTestFile.cmake
+CTestTestfile.cmake
 bin/
 lib/
+tags

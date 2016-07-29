@@ -1,6 +1,7 @@
 /**
  *  \file clipboard_win32.c
  *  \brief Windows implementation of the clipboard.
+ *  The clipboard_mode parameters are ignored.
  */
 
 #if defined _WIN32 || LIBCLIPBOARD_FORCE_WIN32
@@ -16,12 +17,7 @@ struct clipboard_c {
     DWORD last_cb_serial;
 };
 
-clipboard_c *clipboard_new(clipboard_type cb_type, clipboard_opts *cb_opts) {
-    /* Win32: Only supports primary clipboard */
-    if (cb_type != LIBCLIPBOARD_CLIPBOARD) {
-        return NULL;
-    }
-
+clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     clipboard_c *ret = calloc(1, sizeof(clipboard_c));
     if (ret == NULL) {
         return NULL;
@@ -40,7 +36,7 @@ void clipboard_free(clipboard_c *cb) {
     free(cb);
 }
 
-void clipboard_clear(clipboard_c *cb) {
+void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     if (cb == NULL) {
         return;
     }
@@ -58,7 +54,7 @@ void clipboard_clear(clipboard_c *cb) {
     LeaveCriticalSection(&cb->cs);
 }
 
-bool clipboard_has_ownership(clipboard_c *cb) {
+bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     bool ret = false;
     if (cb) {
         EnterCriticalSection(&cb->cs);
@@ -68,7 +64,7 @@ bool clipboard_has_ownership(clipboard_c *cb) {
     return ret;
 }
 
-char *clipboard_text(clipboard_c *cb, int *length) {
+char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
     if (cb == NULL || !OpenClipboard(NULL)) {
@@ -108,7 +104,7 @@ char *clipboard_text(clipboard_c *cb, int *length) {
     return ret;
 }
 
-bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
+bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     if (cb == NULL || src == NULL || length == 0) {
         return false;
     }
@@ -157,4 +153,6 @@ bool clipboard_set_text(clipboard_c *cb, const char *src, int length) {
     return true;
 }
 
+#else
+typedef int win32_dummy_define;
 #endif /* _WIN32 || LIBCLIPBOARD_FORCE_WIN32 */
