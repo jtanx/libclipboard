@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <xcb/xcb.h>
 #include <pthread.h>
@@ -41,13 +42,21 @@ struct clipboard_c {
     atom_c std_atoms[X_ATOM_END];
     /** Our window to use for messages **/
     xcb_window_t xw;
+    /** Action timeout (ms) **/
+    int action_timeout;
 
     /** Event loop thread **/
     pthread_t event_loop;
+    /** Indicates true iff event_loop is initted **/
+    bool event_loop_initted;
     /** Mutex for access to context data **/
     pthread_mutex_t mu;
+    /** Indicates true iff mu is initted **/
+    bool mu_initted;
     /** Condition variable to notify when action is complete **/
     pthread_cond_t cond;
+    /** Indicates true iff cond is initted **/
+    bool cond_initted;
 };
 
 const char const *g_std_atom_names[X_ATOM_END] = {
@@ -89,9 +98,36 @@ static xcb_screen_t *x11_get_screen(xcb_connection_t *xc, int screen) {
     return NULL;
 }
 
+static void *x11_event_loop(void *arg) {
+    clipboard_c *cb = (clipboard_c *)arg;
+    xcb_generic_event_t *e;
+
+    while ((e = xcb_wait_for_event(cb->xc))) {
+        switch (e->response_type & ~0x80) {
+            case XCB_DESTROY_NOTIFY: {
+                xcb_destroy_notify_event_t *evt = (xcb_destroy_notify_event_t *)e;
+                if (evt->window == cb->xw) {
+                    free(e);
+                    return NULL;
+                }
+            }
+            break;
+            default: {
+                /* Ignore unknown messages */
+                break;
+            }
+        }
+        free(e);
+    }
+
+    printf("x11_event_loop: [Warn] xcb_wait_for_event returned NULL\n");
+    return NULL;
+}
+
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11_display_name = NULL,
+        .action_timeout = LC_ACTION_TIMEOUT_DEFAULT
     };
 
     if (cb_opts == NULL) {
@@ -103,14 +139,18 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
         return NULL;
     }
 
-    if (pthread_mutex_init(&cb->mu, NULL) != 0) {
-        free(cb);
+    cb->action_timeout = cb_opts->action_timeout > 0 ?
+                         cb_opts->action_timeout : LC_ACTION_TIMEOUT_DEFAULT;
+
+    cb->mu_initted = pthread_mutex_init(&cb->mu, NULL) == 0;
+    if (!cb->mu_initted) {
+        clipboard_free(cb);
         return NULL;
     }
 
-    if (pthread_cond_init(&cb->cond, NULL) != 0) {
-        pthread_mutex_destroy(&cb->mu);
-        free(cb);
+    cb->cond_initted = pthread_cond_init(&cb->cond, NULL) == 0;
+    if (!cb->cond_initted) {
+        clipboard_free(cb);
         return NULL;
     }
 
@@ -118,28 +158,40 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     cb->xc = xcb_connect(cb_opts->x11_display_name, &preferred_screen);
     assert(cb->xc != NULL); /* Docs say return is never NULL */
     if (xcb_connection_has_error(cb->xc) != 0) {
-        pthread_cond_destroy(&cb->cond);
-        pthread_mutex_destroy(&cb->mu);
-        free(cb);
+        clipboard_free(cb);
         return NULL;
     }
     cb->xs = x11_get_screen(cb->xc, preferred_screen);
     assert(cb->xs != NULL);
 
     if (!x11_intern_atoms(cb->xc, cb->std_atoms, g_std_atom_names, X_ATOM_END)) {
-        pthread_cond_destroy(&cb->cond);
-        pthread_mutex_destroy(&cb->mu);
-        xcb_disconnect(cb->xc);
-        free(cb);
+        clipboard_free(cb);
         return NULL;
     }
 
-    uint32_t event_mask = XCB_EVENT_MASK_PROPERTY_CHANGE;
+    /* Structure notify mask to get DestroyNotify messages */
+    uint32_t event_mask = XCB_EVENT_MASK_STRUCTURE_NOTIFY;
     cb->xw = xcb_generate_id(cb->xc);
-    xcb_create_window(cb->xc, XCB_COPY_FROM_PARENT, cb->xw, cb->xs->root,
-                      0, 0, 10, 10, 0,  XCB_WINDOW_CLASS_INPUT_OUTPUT, cb->xs->root_visual,
-                      XCB_CW_EVENT_MASK, &event_mask);
-    xcb_flush(cb->xc);
+    xcb_generic_error_t *err = xcb_request_check(cb->xc,
+                               xcb_create_window_checked(cb->xc,
+                                       XCB_COPY_FROM_PARENT, cb->xw, cb->xs->root,
+                                       0, 0, 10, 10, 0,  XCB_WINDOW_CLASS_INPUT_OUTPUT,
+                                       cb->xs->root_visual,
+                                       XCB_CW_EVENT_MASK, &event_mask));
+    if (err != NULL) {
+        cb->xw = 0;
+        /* Am I meant to free this? */
+        free(err);
+        clipboard_free(cb);
+        return NULL;
+    }
+
+    cb->event_loop_initted = pthread_create(&cb->event_loop, NULL,
+                                            x11_event_loop, (void *)cb) == 0;
+    if (!cb->event_loop_initted) {
+        clipboard_free(cb);
+        return NULL;
+    }
 
     return cb;
 }
@@ -149,17 +201,48 @@ void clipboard_free(clipboard_c *cb) {
         return;
     }
 
-    xcb_destroy_window(cb->xc, cb->xw);
-    xcb_disconnect(cb->xc);
-    pthread_cond_destroy(&cb->cond);
-    pthread_mutex_destroy(&cb->mu);
+    if (cb->event_loop_initted) {
+        /* This should send a DestroyNotify message as the termination condition */
+        xcb_destroy_window(cb->xc, cb->xw);
+        xcb_flush(cb->xc);
+        pthread_join(cb->event_loop, NULL);
+    } else if (cb->xw != 0) {
+        xcb_destroy_window(cb->xc, cb->xw);
+    }
+
+    if (cb->xc != NULL) {
+        xcb_disconnect(cb->xc);
+    }
+
+    if (cb->cond_initted) {
+        pthread_cond_destroy(&cb->cond);
+    }
+    if (cb->mu_initted) {
+        pthread_mutex_destroy(&cb->mu);
+    }
     free(cb);
 }
 
 void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
-    if (cb == NULL) {
+    if (cb == NULL || cb->xc == NULL) {
         return;
     }
+
+    xcb_atom_t sel;
+
+    switch (mode) {
+        case LC_CLIPBOARD:
+            sel = cb->std_atoms[X_ATOM_CLIPBOARD].atom;
+            break;
+        case LC_SELECTION:
+            sel = XCB_ATOM_PRIMARY;
+            break;
+        default:
+            return;
+    }
+
+    xcb_set_selection_owner(cb->xc, XCB_NONE, sel, XCB_CURRENT_TIME);
+    xcb_flush(cb->xc);
 }
 
 bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {

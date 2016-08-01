@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+/** Default action timeout of 1500ms (on applicable platforms) **/
+#define LC_ACTION_TIMEOUT_DEFAULT 1500
+
 /**
  *  Determines which clipboard is used in called functions.
  */

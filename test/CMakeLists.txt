@@ -10,19 +10,25 @@ set (HEADERS
 
 # Add the target
 add_executable (run-tests ${HEADERS} ${SOURCE})
+add_executable (run-smoke1 smoke_test1.c)
 
 # Link it to gtest
 target_link_libraries(run-tests LINK_PRIVATE gtest gtest_main)
 
 # Link it with libclipboard
 target_link_libraries (run-tests LINK_PUBLIC clipboard)
+target_link_libraries (run-smoke1 LINK_PUBLIC clipboard)
 
 # For `make test`
 add_test(NAME libclipboard-testing
 		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests --gtest_color=yes
-WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME libclipboard-smoke1
+		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-smoke1
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+set_tests_properties(libclipboard-smoke1 PROPERTIES TIMEOUT 10)
 
 # Sigh
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                   ARGS "-V"
-                  DEPENDS run-tests)
+                  DEPENDS run-tests run-smoke1)
