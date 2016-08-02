@@ -20,9 +20,11 @@ extern "C" {
  */
 typedef enum clipboard_mode {
     /** The primary (global) clipboard **/
-    LC_CLIPBOARD,
+    LC_CLIPBOARD = 0,
     /** The (global) mouse selection clipboard **/
     LC_SELECTION,
+    /** Sentinel value for end of clipboard modes **/
+    LC_MODE_END
 } clipboard_mode;
 
 /**

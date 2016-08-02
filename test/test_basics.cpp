@@ -1,6 +1,11 @@
 #include <gtest/gtest.h>
 #include <libclipboard.h>
 #include <vector>
+#include <thread>
+#include <chrono>
+
+using std::this_thread::sleep_for;
+using std::chrono::milliseconds;
 
 class BasicsTest : public ::testing::Test {
 };
@@ -51,6 +56,10 @@ TEST_F(BasicsTest, TestOwnership) {
 
     ASSERT_FALSE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "test2", -1, LC_CLIPBOARD));
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
     ASSERT_FALSE(clipboard_has_ownership(cb1, LC_CLIPBOARD));
     ASSERT_TRUE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
 
@@ -111,7 +120,7 @@ TEST_F(BasicsTest, TestSetText) {
 }
 
 TEST_F(BasicsTest, TestGetText) {
-    clipboard_c *cb = clipboard_new(NULL);
+    clipboard_c *cb1 = clipboard_new(NULL), *cb2 = clipboard_new(NULL);
     char *ret;
     int length;
 
@@ -120,34 +129,43 @@ TEST_F(BasicsTest, TestGetText) {
     ASSERT_TRUE(clipboard_text_ex(NULL, &length, LC_CLIPBOARD) == NULL);
     ASSERT_TRUE(clipboard_text_ex(NULL, &length, LC_SELECTION) == NULL);
 
-    clipboard_set_text_ex(cb, "test", -1, LC_CLIPBOARD);
-    ret = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
+    clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD);
+    ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret);
     free(ret);
 
-    ret = clipboard_text_ex(cb, &length, LC_CLIPBOARD);
+    ret = clipboard_text_ex(cb1, &length, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret);
     ASSERT_EQ(static_cast<int>(strlen("test")), length);
     free(ret);
 
-    clipboard_set_text_ex(cb, "test", 2, LC_CLIPBOARD);
-    ret = clipboard_text_ex(cb, &length, LC_CLIPBOARD);
+    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    ASSERT_STREQ("test", ret);
+    free(ret);
+
+    clipboard_set_text_ex(cb1, "test", 2, LC_CLIPBOARD);
+    ret = clipboard_text_ex(cb1, &length, LC_CLIPBOARD);
     ASSERT_STREQ("te", ret);
     ASSERT_EQ(static_cast<int>(strlen("te")), length);
     free(ret);
 
-    clipboard_free(cb);
+    clipboard_free(cb1);
+    clipboard_free(cb2);
 }
 
 TEST_F(BasicsTest, TestUTF8InputOutput) {
-    clipboard_c *cb = clipboard_new(NULL);
+    clipboard_c *cb1 = clipboard_new(NULL), *cb2 = clipboard_new(NULL);
     char *ret;
 
-    ASSERT_TRUE(clipboard_set_text_ex(cb, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
-    ret = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
+    ASSERT_TRUE(clipboard_set_text_ex(cb1, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
+    ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("\xe6\x9c\xaa\xe6\x9d\xa5", ret);
     free(ret);
 
-    clipboard_free(cb);
+    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    ASSERT_STREQ("\xe6\x9c\xaa\xe6\x9d\xa5", ret);
+    free(ret);
+
+    clipboard_free(cb1);
 
 }
