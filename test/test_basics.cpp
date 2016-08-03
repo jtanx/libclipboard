@@ -100,6 +100,10 @@ TEST_F(BasicsTest, TestSetText) {
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "string", -1, LC_CLIPBOARD));
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
     ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("string", ret1);
@@ -108,6 +112,10 @@ TEST_F(BasicsTest, TestSetText) {
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", 1, LC_CLIPBOARD));
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
     ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("t", ret1);

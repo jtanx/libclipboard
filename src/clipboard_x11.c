@@ -19,28 +19,49 @@
 #include <xcb/xcb.h>
 #include <pthread.h>
 
+/**
+ *  Enumeration of standard X11 atom identifiers
+ */
 typedef enum std_x_atoms {
+    /** The TARGETS atom identifier **/
     X_ATOM_TARGETS = 0,
-    X_ATOM_LENGTH,
+    /** The MULTIPLE atom identifier **/
     X_ATOM_MULTIPLE,
-    X_ATOM_IDENTIFY,
+    /** The TIMESTAMP atom identifier **/
     X_ATOM_TIMESTAMP,
+    /** The INCR atom identifier **/
     X_ATOM_INCR,
+    /** The CLIPBOARD atom identifier **/
     X_ATOM_CLIPBOARD,
+    /** The UTF8_STRING atom identifier **/
     X_ATOM_UTF8_STRING,
+    /** End marker sentinel **/
     X_ATOM_END
 } std_x_atoms;
 
+/**
+ *  Union to simplify getting interned atoms from XCB
+ */
 typedef union atom_c {
+    /** The atom **/
     xcb_atom_t atom;
+    /** The cookie returned by xcb_intern_atom **/
     xcb_intern_atom_cookie_t cookie;
 } atom_c;
 
+/**
+ *  Contains selection data
+ */
 typedef struct selection_c {
+    /** Determines if we currently own the given selection **/
     bool has_ownership;
+    /** The pointer to the data of the selection **/
     unsigned char *data;
+    /** The length (in bytes) of the selection data **/
     size_t length;
+    /** The type of data held in this selection **/
     xcb_atom_t target;
+    /** The X11 atom for the selection mode e.g. XA_PRIMARY **/
     xcb_atom_t xmode;
 } selection_c;
 
@@ -76,11 +97,24 @@ struct clipboard_c {
     selection_c selections[LC_MODE_END];
 };
 
+/**
+ *  The standard atom names. These values should match the
+ *  std_x_atoms enumeration.
+ */
 const char const *g_std_atom_names[X_ATOM_END] = {
-    "TARGETS", "LENGTH", "MULTIPLE", "IDENTIFY",
-    "TIMESTAMP", "INCR", "CLIPBOARD", "UTF8_STRING",
+    "TARGETS", "MULTIPLE", "TIMESTAMP", "INCR",
+    "CLIPBOARD", "UTF8_STRING",
 };
 
+/**
+ *  \brief Interns the list of atoms
+ *
+ *  \param [in] xc The XCB connection.
+ *  \param [out] atoms The location to store interned atoms.
+ *  \param [in] atom_names The names of the atoms to intern.
+ *  \param [in] number The number of atoms to intern.
+ *  \return true iff all atoms were interned.
+ */
 static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char const **atom_names, int number) {
     for (int i = 0; i < number; i++) {
         atoms[i].cookie = xcb_intern_atom(xc, 0,
@@ -101,7 +135,15 @@ static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char con
     return true;
 }
 
-/* Based on https://xcb.freedesktop.org/xlibtoxcbtranslationguide/ */
+/**
+ *  \brief Retrieves the screen from the given connection.
+ *
+ *  \param [in] xc The XCB connection.
+ *  \param [in] screen The screen number to retrieve.
+ *  \return The screen, or NULL on error.
+ *
+ *  Based on https://xcb.freedesktop.org/xlibtoxcbtranslationguide/
+ */
 static xcb_screen_t *x11_get_screen(xcb_connection_t *xc, int screen) {
     xcb_screen_iterator_t iter;
 
@@ -115,6 +157,12 @@ static xcb_screen_t *x11_get_screen(xcb_connection_t *xc, int screen) {
     return NULL;
 }
 
+/**
+ *  \brief Clears the selection data held in our cache on SelectionClear.
+ *
+ *  \param [in] cb The clipboard context.
+ *  \param [in] e The selection clear event.
+ */
 static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e) {
     if (e->owner != cb->xw) {
         return;
@@ -132,6 +180,14 @@ static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e)
     }
 }
 
+/**
+ *  \brief Retrieves the selection into our cache on SelectionNotify
+ *
+ *  \param [in] cb The clipboard context.
+ *  \param [in] e The selection notify event.
+ *
+ *  The INCR format is not supported.
+ */
 static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t *e) {
     unsigned char *buf = NULL;
     size_t bufsiz = 0, bytes_after = 1;
@@ -163,10 +219,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
             actual_format = reply->format;
         }
 
-        /* Check for INCR */
-        //if (reply->type == cb->std_atoms[X_ATOM_INCR].atom) {
-
-        //}
+        /* Todo: Check for INCR */
 
         int nitems = xcb_get_property_value_length(reply);
         if (nitems > 0) {
@@ -216,10 +269,74 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
     free(buf);
 }
 
-static void x11_transmit_selection(clipboard_c *cb, xcb_selection_request_event_t *e) {
+/**
+ *  \brief Sends the selection data to the requestor on SelectionRequest
+ *
+ *  \param [in] cb The clipboard context.
+ *  \param [in] e The selection request event.
+ *  \return true iff the data was sent (requestor's property was changed)
+ *
+ *  Not currently ICCCM compliant as MULTIPLE target is unsupported. Also
+ *  not compliant because we're not supplying a proper TIMESTAMP value.
+ */
+static bool x11_transmit_selection(clipboard_c *cb, xcb_selection_request_event_t *e) {
+    /* Default location to store data if none specified */
+    if (e->property == XCB_NONE) {
+        e->property = e->target;
+    }
 
+    if (e->target == cb->std_atoms[X_ATOM_TARGETS].atom) {
+        xcb_atom_t targets[] = {
+            cb->std_atoms[X_ATOM_TIMESTAMP].atom,
+            cb->std_atoms[X_ATOM_TARGETS].atom,
+            cb->std_atoms[X_ATOM_UTF8_STRING].atom
+        };
+        xcb_change_property(cb->xc, XCB_PROP_MODE_REPLACE, e->requestor,
+                            e->property, XCB_ATOM_ATOM,
+                            sizeof(xcb_atom_t) * 8,
+                            sizeof(targets) / sizeof(xcb_atom_t), targets);
+    } else if (e->target == cb->std_atoms[X_ATOM_TIMESTAMP].atom) {
+        xcb_timestamp_t cur = XCB_CURRENT_TIME;
+        xcb_change_property(cb->xc, XCB_PROP_MODE_REPLACE, e->requestor,
+                            e->property, XCB_ATOM_INTEGER, sizeof(cur) * 8,
+                            1, &cur);
+    } else if (e->target == cb->std_atoms[X_ATOM_UTF8_STRING].atom) {
+        selection_c *sel = NULL;
+        if (pthread_mutex_lock(&cb->mu) != 0) {
+            return false;
+        }
+
+        for (int i = 0; i < LC_MODE_END; i++) {
+            if (cb->selections[i].xmode == e->selection) {
+                sel = &cb->selections[i];
+                break;
+            }
+        }
+
+        if (sel == NULL || !sel->has_ownership || sel->data == NULL || sel->target != e->target) {
+            pthread_mutex_unlock(&cb->mu);
+            return false;
+        }
+
+        xcb_change_property(cb->xc, XCB_PROP_MODE_REPLACE, e->requestor,
+                            e->property, e->target, 8, sel->length, sel->data);
+        pthread_mutex_unlock(&cb->mu);
+    } else {
+        /* Unknown target */
+        return false;
+    }
+
+    return true;
 }
 
+/**
+ *  \brief The main event loop to process window messages.
+ *
+ *  \param [in] arg The clipboard context.
+ *
+ *  This thread will run indefinitely until the clipboard context's window
+ *  is destroyed. It *must* receive a DestroyNotify message to end.
+ */
 static void *x11_event_loop(void *arg) {
     clipboard_c *cb = (clipboard_c *)arg;
     xcb_generic_event_t *e;
@@ -243,27 +360,34 @@ static void *x11_event_loop(void *arg) {
             }
             break;
             case XCB_SELECTION_CLEAR: {
-                fprintf(stderr, "SelectionClear\n");
                 x11_clear_selection(cb, (xcb_selection_clear_event_t *)e);
             }
             break;
             case XCB_SELECTION_NOTIFY: {
-                fprintf(stderr, "SelectionNotify\n");
                 x11_retrieve_selection(cb, (xcb_selection_notify_event_t *)e);
             }
             break;
             case XCB_SELECTION_REQUEST: {
-                fprintf(stderr, "SelectionRequest\n");
-                x11_transmit_selection(cb, (xcb_selection_request_event_t *)e);
+                xcb_selection_request_event_t *req = (xcb_selection_request_event_t *)e;
+
+                if (x11_transmit_selection(cb, req)) {
+                    xcb_selection_notify_event_t notify = {0};
+                    notify.response_type = XCB_SELECTION_NOTIFY;
+                    notify.time = XCB_CURRENT_TIME;
+                    notify.requestor = req->requestor;
+                    notify.selection = req->selection;
+                    notify.target = req->target;
+                    notify.property = req->property;
+                    xcb_send_event(cb->xc, false, req->requestor, XCB_EVENT_MASK_PROPERTY_CHANGE, (char *)&notify);
+                    xcb_flush(cb->xc);
+                }
             }
             break;
             case XCB_PROPERTY_NOTIFY: {
-                fprintf(stderr, "PropertyNotify\n");
             }
             break;
             default: {
                 /* Ignore unknown messages */
-                fprintf(stderr, "Unknown message: %d\n", e->response_type);
             }
         }
         free(e);
@@ -426,6 +550,14 @@ bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     return ret;
 }
 
+/**
+ *  \brief Copies the selection data into a newly allocated buffer
+ *
+ *  \param [in] cb The clipboard context
+ *  \param [in] sel The selection context
+ *  \param [out] ret The return location
+ *  \param [out] length The length of the returned data (optional)
+ */
 static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **ret, int *length) {
     if (sel->data != NULL && sel->target == cb->std_atoms[X_ATOM_UTF8_STRING].atom) {
         *ret = malloc(sizeof(char) * (sel->length + 1));
