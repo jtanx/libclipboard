@@ -19,14 +19,17 @@
 #include <xcb/xcb.h>
 #include <pthread.h>
 
-#define X_ATOM_TARGETS   0
-#define X_ATOM_LENGTH    1
-#define X_ATOM_MULTIPLE  2
-#define X_ATOM_IDENTIFY  3
-#define X_ATOM_TIMESTAMP 4
-#define X_ATOM_CLIPBOARD 5
-#define X_UTF8_STRING    6
-#define X_ATOM_END       7
+typedef enum std_x_atoms {
+    X_ATOM_TARGETS = 0,
+    X_ATOM_LENGTH,
+    X_ATOM_MULTIPLE,
+    X_ATOM_IDENTIFY,
+    X_ATOM_TIMESTAMP,
+    X_ATOM_INCR,
+    X_ATOM_CLIPBOARD,
+    X_ATOM_UTF8_STRING,
+    X_ATOM_END
+} std_x_atoms;
 
 typedef union atom_c {
     xcb_atom_t atom;
@@ -36,7 +39,7 @@ typedef union atom_c {
 typedef struct selection_c {
     bool has_ownership;
     unsigned char *data;
-    int length;
+    size_t length;
     xcb_atom_t target;
     xcb_atom_t xmode;
 } selection_c;
@@ -53,6 +56,8 @@ struct clipboard_c {
     xcb_window_t xw;
     /** Action timeout (ms) **/
     int action_timeout;
+    /** Transfer size (bytes) **/
+    uint32_t transfer_size;
 
     /** Event loop thread **/
     pthread_t event_loop;
@@ -73,7 +78,7 @@ struct clipboard_c {
 
 const char const *g_std_atom_names[X_ATOM_END] = {
     "TARGETS", "LENGTH", "MULTIPLE", "IDENTIFY",
-    "TIMESTAMP", "CLIPBOARD", "UTF8_STRING",
+    "TIMESTAMP", "INCR", "CLIPBOARD", "UTF8_STRING",
 };
 
 static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char const **atom_names, int number) {
@@ -128,7 +133,87 @@ static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e)
 }
 
 static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t *e) {
+    unsigned char *buf = NULL;
+    size_t bufsiz = 0, bytes_after = 1;
+    xcb_get_property_reply_t *reply = NULL;
+    xcb_atom_t actual_type;
+    uint8_t actual_format;
 
+    if (e->property != XCB_ATOM_PRIMARY && e->property != cb->std_atoms[X_ATOM_CLIPBOARD].atom) {
+        fprintf(stderr, "x11_retrieve_selection: [Warn] Unknown selection property returned: %d\n", e->property);
+        return;
+    }
+
+    while (bytes_after > 0) {
+        free(reply);
+        xcb_get_property_cookie_t ck = xcb_get_property(cb->xc, true, cb->xw,
+                                       e->property, XCB_ATOM_ANY,
+                                       bufsiz / 4, cb->transfer_size / 4);
+        reply = xcb_get_property_reply(cb->xc, ck, NULL);
+        /* reply->format should be 8, 16 or 32. */
+        if (reply == NULL || (bufsiz > 0 && (reply->format != actual_format || reply->type != actual_type)) || ((reply->format % 8) != 0)) {
+            fprintf(stderr, "x11_retrieve_selection: [Err] Invalid return value from xcb_get_property_reply\n");
+            free(buf);
+            buf = NULL;
+            break;
+        }
+
+        if (bufsiz == 0) {
+            actual_type = reply->type;
+            actual_format = reply->format;
+        }
+
+        /* Check for INCR */
+        //if (reply->type == cb->std_atoms[X_ATOM_INCR].atom) {
+
+        //}
+
+        int nitems = xcb_get_property_value_length(reply);
+        if (nitems > 0) {
+            if ((bufsiz % 4) != 0) {
+                fprintf(stderr, "x11_retrieve_selection: [Err] Got more data but read data size is not a multiple of 4\n");
+                free(buf);
+                buf = NULL;
+                break;
+            }
+
+            size_t unit_size = (reply->format / 8);
+            buf = realloc(buf, unit_size * (bufsiz + nitems));
+            if (buf == NULL) {
+                fprintf(stderr, "x11_retrieve_selection: [Err] realloc failed\n");
+                break;
+            }
+
+            memcpy(buf + bufsiz, xcb_get_property_value(reply), nitems * unit_size);
+            bufsiz += nitems * unit_size;
+        }
+
+        bytes_after = reply->bytes_after;
+    }
+    free(reply);
+
+    if (buf != NULL && (pthread_mutex_lock(&cb->mu) == 0)) {
+        selection_c *sel = NULL;
+        for (int i = 0; i < LC_MODE_END; i++) {
+            if (cb->selections[i].xmode == e->property) {
+                sel = &cb->selections[i];
+                break;
+            }
+        }
+
+        if (sel != NULL && sel->target == actual_type) {
+            free(sel->data);
+            sel->data = buf;
+            sel->length = bufsiz;
+            buf = NULL;
+        } else {
+            fprintf(stderr, "x11_retrieve_selection: [Warn] Mismatched selection: actual_type=%d\n", actual_type);
+        }
+
+        pthread_cond_broadcast(&cb->cond);
+        pthread_mutex_unlock(&cb->mu);
+    }
+    free(buf);
 }
 
 static void x11_transmit_selection(clipboard_c *cb, xcb_selection_request_event_t *e) {
@@ -143,7 +228,7 @@ static void *x11_event_loop(void *arg) {
         if (e->response_type == 0) {
             /* I think this cast is appropriate... */
             xcb_generic_error_t *err = (xcb_generic_error_t *) e;
-            printf("x11_event_loop: [Warn] Received X11 error: %d\n", err->error_code);
+            fprintf(stderr, "x11_event_loop: [Warn] Received X11 error: %d\n", err->error_code);
             free(e);
             continue;
         }
@@ -156,38 +241,43 @@ static void *x11_event_loop(void *arg) {
                     return NULL;
                 }
             }
+            break;
             case XCB_SELECTION_CLEAR: {
-                printf("SelectionClear\n");
+                fprintf(stderr, "SelectionClear\n");
                 x11_clear_selection(cb, (xcb_selection_clear_event_t *)e);
             }
+            break;
             case XCB_SELECTION_NOTIFY: {
-                printf("SelectionNotify\n");
+                fprintf(stderr, "SelectionNotify\n");
                 x11_retrieve_selection(cb, (xcb_selection_notify_event_t *)e);
             }
             break;
-            break;
             case XCB_SELECTION_REQUEST: {
-                printf("SelectionRequest\n");
+                fprintf(stderr, "SelectionRequest\n");
                 x11_transmit_selection(cb, (xcb_selection_request_event_t *)e);
             }
             break;
+            case XCB_PROPERTY_NOTIFY: {
+                fprintf(stderr, "PropertyNotify\n");
+            }
             break;
             default: {
                 /* Ignore unknown messages */
-                break;
+                fprintf(stderr, "Unknown message: %d\n", e->response_type);
             }
         }
         free(e);
     }
 
-    printf("x11_event_loop: [Warn] xcb_wait_for_event returned NULL\n");
+    fprintf(stderr, "x11_event_loop: [Warn] xcb_wait_for_event returned NULL\n");
     return NULL;
 }
 
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11_display_name = NULL,
-        .action_timeout = LC_ACTION_TIMEOUT_DEFAULT
+        .action_timeout = LC_ACTION_TIMEOUT_DEFAULT,
+        .transfer_size = LC_TRANSFER_SIZE_DEFAULT,
     };
 
     if (cb_opts == NULL) {
@@ -201,6 +291,11 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
 
     cb->action_timeout = cb_opts->action_timeout > 0 ?
                          cb_opts->action_timeout : LC_ACTION_TIMEOUT_DEFAULT;
+    /* Round down to nearest multiple of 4 */
+    cb->transfer_size = (cb_opts->transfer_size / 4) * 4;
+    if (cb->transfer_size == 0) {
+        cb->transfer_size = LC_TRANSFER_SIZE_DEFAULT;
+    }
 
     cb->mu_initted = pthread_mutex_init(&cb->mu, NULL) == 0;
     if (!cb->mu_initted) {
@@ -233,7 +328,8 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     cb->selections[LC_SELECTION].xmode = XCB_ATOM_PRIMARY;
 
     /* Structure notify mask to get DestroyNotify messages */
-    uint32_t event_mask = XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+    /* Property change mask for PropertyChange messages */
+    uint32_t event_mask = XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE;
     cb->xw = xcb_generate_id(cb->xc);
     xcb_generic_error_t *err = xcb_request_check(cb->xc,
                                xcb_create_window_checked(cb->xc,
@@ -331,7 +427,7 @@ bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
 }
 
 static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **ret, int *length) {
-    if (sel->target == cb->std_atoms[X_UTF8_STRING].atom) {
+    if (sel->data != NULL && sel->target == cb->std_atoms[X_ATOM_UTF8_STRING].atom) {
         *ret = malloc(sizeof(char) * (sel->length + 1));
         if (*ret != NULL) {
             memcpy(*ret, sel->data, sel->length);
@@ -361,9 +457,25 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
             struct timespec timeout;
             int pret = 0;
 
-            xcb_convert_selection(cb->xc, cb->xw, cb->selections[mode].xmode,
-                                  cb->std_atoms[X_UTF8_STRING].atom,
-                                  cb->selections[mode].xmode, XCB_CURRENT_TIME);
+            xcb_get_selection_owner_reply_t *owner = xcb_get_selection_owner_reply(cb->xc,
+                    xcb_get_selection_owner(cb->xc, sel->xmode), NULL);
+            if (owner == NULL || owner->owner == 0) {
+                /* No selection owner; no data available */
+                pthread_mutex_unlock(&cb->mu);
+                free(owner);
+                return NULL;
+            }
+            free(owner);
+
+            /* Unset any old value */
+            free(sel->data);
+            sel->data = NULL;
+            sel->length = 0;
+
+            sel->target = cb->std_atoms[X_ATOM_UTF8_STRING].atom;
+            xcb_convert_selection(cb->xc, cb->xw, sel->xmode,
+                                  sel->target, sel->xmode, XCB_CURRENT_TIME);
+            xcb_flush(cb->xc);
 
             /* Calculate timeout */
             gettimeofday(&now, NULL);
@@ -374,7 +486,7 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
                 timeout.tv_nsec = timeout.tv_nsec % 1000000000UL;
             }
 
-            while (pret == 0 && cb->selections[mode].data == NULL) {
+            while (pret == 0 && sel->data == NULL) {
                 pret = pthread_cond_timedwait(&cb->cond, &cb->mu, &timeout);
             }
 
@@ -409,7 +521,7 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
             sel->data[length] = '\0';
             sel->length = length;
             sel->has_ownership = true;
-            sel->target = cb->std_atoms[X_UTF8_STRING].atom;
+            sel->target = cb->std_atoms[X_ATOM_UTF8_STRING].atom;
             xcb_set_selection_owner(cb->xc, cb->xw, sel->xmode, XCB_CURRENT_TIME);
             xcb_flush(cb->xc);
             ret = true;

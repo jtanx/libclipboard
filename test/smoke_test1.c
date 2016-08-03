@@ -3,8 +3,6 @@
  *  \brief Simple test of fast init/deinit to weed out race conditions
  */
 
-#include "libclipboard.h"
-
 #ifndef _WIN32
 #  ifndef _BSD_SOURCE
 #    define _BSD_SOURCE
@@ -17,6 +15,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "libclipboard.h"
 
 #define N_ITER 500
 

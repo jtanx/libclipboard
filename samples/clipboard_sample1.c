@@ -31,4 +31,7 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+
+    clipboard_free(cb);
+    return 0;
 }

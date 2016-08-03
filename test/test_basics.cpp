@@ -167,5 +167,5 @@ TEST_F(BasicsTest, TestUTF8InputOutput) {
     free(ret);
 
     clipboard_free(cb1);
-
+    clipboard_free(cb2);
 }
