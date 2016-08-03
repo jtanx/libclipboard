@@ -42,3 +42,13 @@ CTestTestfile.cmake
 bin/
 lib/
 tags
+
+# CMake Visual Studio generated
+.vs/
+Win32/
+*.dir/
+*.vcxproj
+*.opensdf
+*.sdf
+*.sln
+*.vcxproj.filters

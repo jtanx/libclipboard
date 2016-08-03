@@ -58,6 +58,9 @@ if (test)
     if (MINGW)
         # CMake is case sensitive for 'ON CACHE BOOL'...
         set(gtest_disable_pthreads ON CACHE BOOL "Disable gtest pthreads (default:on)")
+    elseif (MSVC)
+        # Runtime library conflicts
+        set(gtest_force_shared_crt ON CACHE BOOL "Always use dynamic runtime library (default:on)" )
     endif()
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
     enable_testing()
