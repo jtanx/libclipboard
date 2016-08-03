@@ -3,6 +3,7 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 using std::this_thread::sleep_for;
 using std::chrono::milliseconds;
@@ -45,6 +46,7 @@ TEST_F(BasicsTest, TestClearingClipboard) {
 }
 
 TEST_F(BasicsTest, TestOwnership) {
+#ifndef __APPLE__
     clipboard_c *cb1 = clipboard_new(NULL);
     clipboard_c *cb2 = clipboard_new(NULL);
     ASSERT_FALSE(clipboard_has_ownership(cb1, LC_CLIPBOARD));
@@ -62,7 +64,7 @@ TEST_F(BasicsTest, TestOwnership) {
     ASSERT_FALSE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "test2", -1, LC_CLIPBOARD));
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
     ASSERT_FALSE(clipboard_has_ownership(cb1, LC_CLIPBOARD));
@@ -70,6 +72,9 @@ TEST_F(BasicsTest, TestOwnership) {
 
     clipboard_free(cb2);
     clipboard_free(cb1);
+#else
+    std::cout << "[  SKIPPED ] clipboard_has_ownership is not supported on OS X (Cocoa)" << std::endl;
+#endif
 }
 
 TEST_F(BasicsTest, TestSetTextEdgeCases) {
@@ -98,7 +103,7 @@ TEST_F(BasicsTest, TestSetText) {
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD));
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
 
@@ -110,7 +115,7 @@ TEST_F(BasicsTest, TestSetText) {
 
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "string", -1, LC_CLIPBOARD));
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
     ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
@@ -122,7 +127,7 @@ TEST_F(BasicsTest, TestSetText) {
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", 1, LC_CLIPBOARD));
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
     ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
@@ -148,7 +153,7 @@ TEST_F(BasicsTest, TestGetText) {
 
     clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD);
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
@@ -180,7 +185,7 @@ TEST_F(BasicsTest, TestUTF8InputOutput) {
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
 #ifdef __linux__
-    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);

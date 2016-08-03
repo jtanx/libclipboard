@@ -22,6 +22,7 @@ endif()
 
 # Dependencies
 if (APPLE)
+    set_source_files_properties(src/clipboard_cocoa.c PROPERTIES COMPILE_FLAGS "-x objective-c")
     link_libraries("-framework Cocoa")
 elseif (UNIX)
     include (FindPkgConfig)
@@ -46,8 +47,6 @@ set(SOURCE
     src/clipboard_cocoa.c
     src/clipboard_common.c
 )
-
-set_source_files_properties(src/clipboard_cocoa.c PROPERTIES COMPILE_FLAGS "-x objective-c")
 
 # Set the output folders
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
