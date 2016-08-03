@@ -26,7 +26,7 @@ add_test(NAME libclipboard-testing
 add_test(NAME libclipboard-smoke1
 		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-smoke1
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-set_tests_properties(libclipboard-smoke1 PROPERTIES TIMEOUT 10)
+set_tests_properties(libclipboard-smoke1 PROPERTIES TIMEOUT 60)
 
 # Sigh
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}

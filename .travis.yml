@@ -1,0 +1,29 @@
+#Container based testing
+sudo: false
+language: cpp
+compiler: gcc
+branches: 
+  only:
+    - master
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.9
+      - gcc-4.9
+      - libxcb1-dev
+      - pkg-config
+install:
+  - export CXX="g++-4.9"
+  - export CC="gcc-4.9"
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
+script:
+  - $CXX --version
+  - $CC --version
+  - cmake -Dtest=on -Dsamples=on .
+  - make
+  - make check
