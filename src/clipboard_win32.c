@@ -1,7 +1,6 @@
 /**
  *  \file clipboard_win32.c
  *  \brief Windows implementation of the clipboard.
- *  The clipboard_mode parameters are ignored.
  */
 
 #if defined _WIN32 || LIBCLIPBOARD_FORCE_WIN32

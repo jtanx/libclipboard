@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project(libclipboard)
 
 # Set compiler flags
-if (CMAKE_COMPILER_IS_GNUCC)
+if (CMAKE_COMPILER_IS_GNUCC OR APPLE)
     set(GCC_COMPILE_FLAGS "-std=c99 -Wall -pedantic -g")
 
     execute_process(COMMAND $ {CMAKE_C_COMPILER} -dumpversion
@@ -15,12 +15,15 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${GCC_COMPILE_FLAGS}")
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-    set (CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -g")
+if (CMAKE_COMPILER_IS_GNUCXX OR APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -g")
 endif()
 
+
 # Dependencies
-if (UNIX AND NOT APPLE)
+if (APPLE)
+    link_libraries("-framework Cocoa")
+elseif (UNIX)
     include (FindPkgConfig)
     pkg_check_modules(X11 xcb REQUIRED)
     find_package (Threads REQUIRED)
@@ -40,8 +43,11 @@ set(HEADERS
 set(SOURCE
     src/clipboard_win32.c
     src/clipboard_x11.c
+    src/clipboard_cocoa.c
     src/clipboard_common.c
 )
+
+set_source_files_properties(src/clipboard_cocoa.c PROPERTIES COMPILE_FLAGS "-x objective-c")
 
 # Set the output folders
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

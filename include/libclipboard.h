@@ -55,7 +55,8 @@ typedef struct clipboard_opts {
 typedef struct clipboard_c clipboard_c;
 
 #if !defined(_WIN32) && !defined(LIBCLIPBOARD_FORCE_WIN32) && \
-    !defined(__linux__) && !defined(LIBCLIPBOARD_FORCE_X11)
+    !defined(__linux__) && !defined(LIBCLIPBOARD_FORCE_X11) && \
+    !defined(__APPLE__) && !defined(LIBCLIPBOARD_FORCE_COCOA)
 #  error "Unsupported platform"
 #endif
 
