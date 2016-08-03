@@ -97,6 +97,10 @@ TEST_F(BasicsTest, TestSetText) {
     clipboard_c *cb2 = clipboard_new(NULL);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD));
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
 
     char *ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD), *ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret1);
@@ -143,6 +147,10 @@ TEST_F(BasicsTest, TestGetText) {
     ASSERT_TRUE(clipboard_text_ex(NULL, &length, LC_SELECTION) == NULL);
 
     clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD);
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret);
     free(ret);
@@ -171,6 +179,10 @@ TEST_F(BasicsTest, TestUTF8InputOutput) {
     char *ret;
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
+#ifdef __linux__
+    /* Race condition on X11: SelectionClear event comes after checking for has_ownership */
+    sleep_for(milliseconds(100));
+#endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("\xe6\x9c\xaa\xe6\x9d\xa5", ret);
     free(ret);
