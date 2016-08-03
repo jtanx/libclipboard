@@ -13,10 +13,14 @@
 extern "C" {
 #endif
 
-/** Default action timeout of 1500ms (on applicable platforms) **/
-#define LC_ACTION_TIMEOUT_DEFAULT 1500
+/** Default action timeout of 1500ms **/
+#define LC_X11_ACTION_TIMEOUT_DEFAULT 1500
 /** Default transfer size (X11 only), default 1MB (must be multiple of 4) **/
-#define LC_TRANSFER_SIZE_DEFAULT  1048576
+#define LC_X11_TRANSFER_SIZE_DEFAULT  1048576
+/** Default max number of retries to try to obtain clipboard lock **/
+#define LC_WIN32_MAX_RETRIES_DEFAULT 5
+/** Default delay in ms between retries to obtain clipboard lock **/
+#define LC_WIN32_RETRY_DELAY_DEFAULT 5
 
 /**
  *  Determines which clipboard is used in called functions.
@@ -35,11 +39,16 @@ typedef enum clipboard_mode {
  */
 typedef struct clipboard_opts {
     /** Max time (ms) to wait for action to complete (X11 only) **/
-    int action_timeout;
+    int x11_action_timeout;
     /** Transfer size, in bytes (X11 only). Must be a multiple of 4. **/
-    uint32_t transfer_size;
+    uint32_t x11_transfer_size;
     /** The name of the X11 display (NULL for default - DISPLAY env. var.) **/
     const char *x11_display_name;
+
+    /** Max number of retries to try to obtain clipboard lock **/
+    int win32_max_retries;
+    /** Delay in ms between retries to obtain clipboard lock **/
+    int win32_retry_delay;
 } clipboard_opts;
 
 /** Opaque data structure for a clipboard context/instance **/

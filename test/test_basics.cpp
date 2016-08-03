@@ -15,6 +15,12 @@ TEST_F(BasicsTest, TestInstantiation) {
     ASSERT_TRUE(ret != NULL);
     clipboard_free(ret);
     // TODO(jtanx): Insert platform specific tests based on clipboard_opts
+#ifdef _WIN32
+    clipboard_opts opts = {0};
+    ret = clipboard_new(&opts);
+    ASSERT_TRUE(ret != NULL);
+    clipboard_free(ret);
+#endif
 }
 
 TEST_F(BasicsTest, TestMultipleInstantiation) {
@@ -31,7 +37,6 @@ TEST_F(BasicsTest, TestMultipleInstantiation) {
 TEST_F(BasicsTest, TestClearingClipboard) {
     clipboard_c *cb = clipboard_new(NULL);
     clipboard_clear(cb, LC_CLIPBOARD);
-    ASSERT_FALSE(clipboard_has_ownership(cb, LC_CLIPBOARD));
 
     char *text = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
     ASSERT_TRUE(text == NULL);

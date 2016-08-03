@@ -400,8 +400,8 @@ static void *x11_event_loop(void *arg) {
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11_display_name = NULL,
-        .action_timeout = LC_ACTION_TIMEOUT_DEFAULT,
-        .transfer_size = LC_TRANSFER_SIZE_DEFAULT,
+        .x11_action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
+        .x11_transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT,
     };
 
     if (cb_opts == NULL) {
@@ -413,12 +413,12 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
         return NULL;
     }
 
-    cb->action_timeout = cb_opts->action_timeout > 0 ?
-                         cb_opts->action_timeout : LC_ACTION_TIMEOUT_DEFAULT;
+    cb->action_timeout = cb_opts->x11_action_timeout > 0 ?
+                         cb_opts->x11_action_timeout : LC_X11_ACTION_TIMEOUT_DEFAULT;
     /* Round down to nearest multiple of 4 */
-    cb->transfer_size = (cb_opts->transfer_size / 4) * 4;
+    cb->transfer_size = (cb_opts->x11_transfer_size / 4) * 4;
     if (cb->transfer_size == 0) {
-        cb->transfer_size = LC_TRANSFER_SIZE_DEFAULT;
+        cb->transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT;
     }
 
     cb->mu_initted = pthread_mutex_init(&cb->mu, NULL) == 0;
