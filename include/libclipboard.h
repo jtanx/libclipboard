@@ -28,6 +28,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,28 @@ extern "C" {
 #define LC_WIN32_RETRY_DELAY_DEFAULT 5
 
 /**
+ *  \brief For internal use only. Initialises custom allocators.
+ *
+ *  \param [out] cb Clipboard context
+ *  \param [in] opts Clipboard options
+ */
+#define LC_SET_ALLOCATORS(cb, opts) do { \
+    (cb)->malloc = (opts) && (opts)->user_malloc_fn ? (opts)->user_malloc_fn : malloc; \
+    (cb)->calloc = (opts) && (opts)->user_calloc_fn ? (opts)->user_calloc_fn : calloc; \
+    (cb)->realloc = (opts) && (opts)->user_realloc_fn  ? (opts)->user_realloc_fn : realloc; \
+    (cb)->free = (opts) && (opts)->user_free_fn ? (opts)->user_free_fn : free; \
+} while(0)
+
+/** Custom malloc function signature **/
+typedef void *(*clipboard_malloc_fn)(size_t size);
+/** Custom calloc function signature **/
+typedef void *(*clipboard_calloc_fn)(size_t nmemb, size_t size);
+/** Custom realloc function signature **/
+typedef void *(*clipboard_realloc_fn)(void *ptr, size_t size);
+/** Custom free function signature **/
+typedef void (*clipboard_free_fn)(void *ptr);
+
+/**
  *  Determines which clipboard is used in called functions.
  */
 typedef enum clipboard_mode {
@@ -55,20 +78,38 @@ typedef enum clipboard_mode {
 } clipboard_mode;
 
 /**
- *  Implementation specific options to be passed on instantiation.
+ *  Options to be passed on instantiation.
  */
 typedef struct clipboard_opts {
-    /** Max time (ms) to wait for action to complete (X11 only) **/
-    int x11_action_timeout;
-    /** Transfer size, in bytes (X11 only). Must be a multiple of 4. **/
-    uint32_t x11_transfer_size;
-    /** The name of the X11 display (NULL for default - DISPLAY env. var.) **/
-    const char *x11_display_name;
+    /* I would put the OS specific opts in a union, but anonymous unions are non-standard */
+    /* Typing out union names is too much effort */
 
-    /** Max number of retries to try to obtain clipboard lock **/
-    int win32_max_retries;
-    /** Delay in ms between retries to obtain clipboard lock **/
-    int win32_retry_delay;
+    /** X11 specific options **/
+    struct clipboard_opts_x11 {
+        /** Max time (ms) to wait for action to complete **/
+        int action_timeout;
+        /** Transfer size, in bytes. Must be a multiple of 4. **/
+        uint32_t transfer_size;
+        /** The name of the X11 display (NULL for default - DISPLAY env. var.) **/
+        const char *display_name;
+    } x11;
+
+    /** Win32 specific options **/
+    struct clipboard_opts_win32 {
+        /** Max number of retries to try to obtain clipboard lock **/
+        int max_retries;
+        /** Delay in ms between retries to obtain clipboard lock **/
+        int retry_delay;
+    } win32;
+
+    /** User specified malloc (NULL for default) **/
+    clipboard_malloc_fn user_malloc_fn;
+    /** User specified calloc (NULL for default) **/
+    clipboard_calloc_fn user_calloc_fn;
+    /** User specified realloc (NULL for default) **/
+    clipboard_realloc_fn user_realloc_fn;
+    /** User specified free (NULL for default) **/
+    clipboard_free_fn user_free_fn;
 } clipboard_opts;
 
 /** Opaque data structure for a clipboard context/instance **/
