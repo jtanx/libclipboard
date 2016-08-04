@@ -2,6 +2,7 @@
 
 cmake_minimum_required(VERSION 2.8)
 project(libclipboard)
+set(LIBCLIPBOARD_VERSION 1 CACHE STRING "libclipboard version number")
 
 # Set compiler flags
 if (CMAKE_COMPILER_IS_GNUCC OR APPLE)
@@ -23,14 +24,14 @@ endif()
 # Dependencies
 if (APPLE)
     set_source_files_properties(src/clipboard_cocoa.c PROPERTIES COMPILE_FLAGS "-x objective-c")
-    link_libraries("-framework Cocoa")
+    set(LIBCLIPBOARD_PRIVATE_LIBS ${LIBCLIPBOARD_PRIVATE_LIBS} "-framework Cocoa")
 elseif (UNIX)
-    include (FindPkgConfig)
+    include (FindPkgConfig REQUIRED)
     pkg_check_modules(X11 xcb REQUIRED)
     find_package (Threads REQUIRED)
 
     include_directories(${X11_INCLUDE_DIR})
-    link_libraries(${X11_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    set(LIBCLIPBOARD_PRIVATE_LIBS ${LIBCLIPBOARD_PRIVATE_LIBS} ${X11_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 # Include directories
@@ -56,6 +57,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Make the library
 option (BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" OFF)
 add_library(clipboard ${HEADERS} ${SOURCE})
+target_link_libraries(clipboard LINK_PRIVATE ${LIBCLIPBOARD_PRIVATE_LIBS})
+option (LIBCLIPBOARD_ADD_SOVERSION "Add soname versions to the built library (default:off)" OFF)
+if (LIBCLIPBOARD_ADD_SOVERSION)
+    # Not by default because my file system doesn't support symlinks
+    set_target_properties(clipboard PROPERTIES SOVERSION ${LIBCLIPBOARD_VERSION} VERSION ${LIBCLIPBOARD_VERSION})
+endif()
 
 # Testing mode?
 option (test "Enable libclipboard unit testing (default:off)" OFF)
@@ -80,6 +87,16 @@ if (samples)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/samples)
 endif()
 
+# Pkgconfig
+include(FindPkgConfig QUIET)
+if (PKGCONFIG_FOUND)
+    string(REPLACE "-l" "" LIBCLIPBOARD_PRIVATE_LIBS_LIST "${LIBCLIPBOARD_PRIVATE_LIBS}")
+    string(REPLACE ";" " -l" LIBCLIPBOARD_PRIVATE_LIBS_LIST "${LIBCLIPBOARD_PRIVATE_LIBS_LIST}")
+    string(STRIP "${LIBCLIPBOARD_PRIVATE_LIBS_LIST}" LIBCLIPBOARD_PRIVATE_LIBS_LIST)
+    configure_file("libclipboard.pc.in" "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/pkgconfig/libclipboard.pc" @ONLY)
+    install(FILES "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/pkgconfig/libclipboard.pc" DESTINATION "lib/pkgconfig")
+endif()
+
 # Install options
 install(TARGETS clipboard
         RUNTIME DESTINATION bin
@@ -87,7 +104,7 @@ install(TARGETS clipboard
         ARCHIVE DESTINATION lib)
 install(FILES ${HEADERS} DESTINATION include)
 
-# uninstall target
+# Uninstall target
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
