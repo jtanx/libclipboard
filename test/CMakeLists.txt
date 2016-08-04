@@ -2,10 +2,11 @@
 
 # Source files
 set (SOURCE
-	 test_basics.cpp
+     test_basics.cpp
+     test_custom_allocators.cpp
 )
 set (HEADERS
-	
+
 )
 
 # Add the target
@@ -21,10 +22,10 @@ target_link_libraries (run-smoke1 LINK_PUBLIC clipboard)
 
 # For `make test`
 add_test(NAME libclipboard-testing
-		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests --gtest_color=yes
+         COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests --gtest_color=yes
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME libclipboard-smoke1
-		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-smoke1
+         COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-smoke1
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 set_tests_properties(libclipboard-smoke1 PROPERTIES TIMEOUT 60)
 

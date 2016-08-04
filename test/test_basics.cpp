@@ -1,3 +1,7 @@
+/**
+ *  \file test_basics.cpp
+ *  \brief Basic unit tests
+ */
 #include <gtest/gtest.h>
 #include <libclipboard.h>
 #include <vector>
