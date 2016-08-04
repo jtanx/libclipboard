@@ -9,12 +9,15 @@
 #include "libclipboard.h"
 #include <stdlib.h>
 
+#include <libkern/OSAtomic.h>
 #include <Cocoa/Cocoa.h>
 
 /** Cocoa Implementation of the clipboard context **/
 struct clipboard_c {
     /** Handle to the global pasteboard. Really this doesn't need to be here... */
     NSPasteboard *pb;
+    /** Pasteboard serial at last check **/
+    volatile long last_cb_serial;
 };
 
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
@@ -37,6 +40,9 @@ void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
 }
 
 bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
+    if (cb) {
+        return [cb->pb changeCount] == cb->last_cb_serial;
+    }
     return false;
 }
 
@@ -87,6 +93,9 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
     [cb->pb declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
     ret = [cb->pb setString:ns_clip forType:NSStringPboardType];
     [ns_clip release];
+
+    long serial = [cb->pb changeCount];
+    OSAtomicCompareAndSwapLong(cb->last_cb_serial, serial, &cb->last_cb_serial);
     return ret;
 }
 

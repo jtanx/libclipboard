@@ -4,7 +4,7 @@ libclipboard [![Linux Build Status](https://travis-ci.org/jtanx/libclipboard.png
 A cross-platform clipboard library.
 
 ## Currently supported actions
-* Checking clipboard data ownership (Windows/Linux only)
+* Checking clipboard data ownership
 * Clearing clipboard
 * Retrieving/setting text (UTF-8)
 

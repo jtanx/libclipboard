@@ -103,9 +103,6 @@ extern void clipboard_clear(clipboard_c *cb, clipboard_mode mode);
  *  \param [in] cb The clipboard to check
  *  \param [in] mode Which clipboard to clear (platform dependent)
  *  \return true iff the clipboard data is owned by the provided instance.
- *
- *  \details NOTE: This function is UNSUPPORTED on OS X, and will always
- *           return false.
  */
 extern bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode);
 

@@ -48,7 +48,6 @@ TEST_F(BasicsTest, TestClearingClipboard) {
 }
 
 TEST_F(BasicsTest, TestOwnership) {
-#ifndef __APPLE__
     clipboard_c *cb1 = clipboard_new(NULL);
     clipboard_c *cb2 = clipboard_new(NULL);
     ASSERT_FALSE(clipboard_has_ownership(cb1, LC_CLIPBOARD));
@@ -74,9 +73,6 @@ TEST_F(BasicsTest, TestOwnership) {
 
     clipboard_free(cb2);
     clipboard_free(cb1);
-#else
-    std::cout << "[  SKIPPED ] clipboard_has_ownership is not supported on OS X (Cocoa)" << std::endl;
-#endif
 }
 
 TEST_F(BasicsTest, TestSetTextEdgeCases) {
