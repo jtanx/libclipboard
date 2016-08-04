@@ -1,12 +1,14 @@
 #include <gtest/gtest.h>
 #include <libclipboard.h>
 #include <vector>
-#include <thread>
-#include <chrono>
 #include <iostream>
 
+#ifdef LIBCLIPBOARD_BUILD_X11
+#include <thread>
+#include <chrono>
 using std::this_thread::sleep_for;
 using std::chrono::milliseconds;
+#endif
 
 class BasicsTest : public ::testing::Test {
 };
@@ -16,7 +18,7 @@ TEST_F(BasicsTest, TestInstantiation) {
     ASSERT_TRUE(ret != NULL);
     clipboard_free(ret);
     // TODO(jtanx): Insert platform specific tests based on clipboard_opts
-#ifdef _WIN32
+#ifdef LIBCLIPBOARD_BUILD_WIN32
     clipboard_opts opts = {0};
     ret = clipboard_new(&opts);
     ASSERT_TRUE(ret != NULL);
@@ -63,7 +65,7 @@ TEST_F(BasicsTest, TestOwnership) {
 
     ASSERT_FALSE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "test2", -1, LC_CLIPBOARD));
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
@@ -102,7 +104,7 @@ TEST_F(BasicsTest, TestSetText) {
     clipboard_c *cb2 = clipboard_new(NULL);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD));
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
@@ -114,7 +116,7 @@ TEST_F(BasicsTest, TestSetText) {
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "string", -1, LC_CLIPBOARD));
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
@@ -126,7 +128,7 @@ TEST_F(BasicsTest, TestSetText) {
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", 1, LC_CLIPBOARD));
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
@@ -152,7 +154,7 @@ TEST_F(BasicsTest, TestGetText) {
     ASSERT_TRUE(clipboard_text_ex(NULL, &length, LC_SELECTION) == NULL);
 
     clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD);
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif
@@ -184,7 +186,7 @@ TEST_F(BasicsTest, TestUTF8InputOutput) {
     char *ret;
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
-#ifdef __linux__
+#ifdef LIBCLIPBOARD_BUILD_X11
     /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
     sleep_for(milliseconds(100));
 #endif

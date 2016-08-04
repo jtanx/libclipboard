@@ -3,7 +3,9 @@
  *  \brief Windows implementation of the clipboard.
  */
 
-#if defined _WIN32 || LIBCLIPBOARD_FORCE_WIN32
+#include "libclipboard.h"
+
+#ifdef LIBCLIPBOARD_BUILD_WIN32
 
 #include "libclipboard.h"
 #include <windows.h>
@@ -216,6 +218,4 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
     return true;
 }
 
-#else
-typedef int win32_dummy_define;
-#endif /* _WIN32 || LIBCLIPBOARD_FORCE_WIN32 */
+#endif /* LIBCLIPBOARD_BUILD_WIN32 */

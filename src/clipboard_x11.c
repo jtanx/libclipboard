@@ -5,9 +5,9 @@
  *  Blegh I hate X11
  */
 
-#if defined __linux__ || LIBCLIPBOARD_FORCE_X11
-
 #include "libclipboard.h"
+
+#ifdef LIBCLIPBOARD_BUILD_X11
 
 #include <assert.h>
 #include <stdlib.h>
@@ -665,6 +665,4 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
     return ret;
 }
 
-#else
-typedef int x11_dummy_define;
-#endif /* __linux__ || LIBCLIPBOARD_FORCE_X11 */
+#endif /* LIBCLIPBOARD_BUILD_X11 */

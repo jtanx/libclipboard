@@ -54,10 +54,11 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Make the library
+option (BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" OFF)
 add_library(clipboard ${HEADERS} ${SOURCE})
 
 # Testing mode?
-set (test OFF CACHE BOOL "Enable libclipboard unit testing (default:off)")
+option (test "Enable libclipboard unit testing (default:off)" OFF)
 if (test)
     # gtest does not play well with pthreads and mingw
     if (MINGW)
@@ -67,14 +68,30 @@ if (test)
         # Runtime library conflicts
         set(gtest_force_shared_crt ON CACHE BOOL "Always use dynamic runtime library (default:on)" )
     endif()
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest EXCLUDE_FROM_ALL)
     enable_testing()
     include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 # Build sample executables?
-set (samples OFF CACHE BOOL "Build libclipboard sample executables (default:off)")
+option (samples "Build libclipboard sample executables (default:off)" OFF)
 if (samples)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/samples)
 endif()
+
+# Install options
+install(TARGETS clipboard
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
+install(FILES ${HEADERS} DESTINATION include)
+
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)

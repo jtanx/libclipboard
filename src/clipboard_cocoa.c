@@ -3,7 +3,8 @@
  *  \brief OS X (Cocoa) implementation of the clipboard.
  */
 
-#if defined __APPLE__ || LIBCLIPBOARD_FORCE_COCOA
+#include "libclipboard.h"
+#ifdef LIBCLIPBOARD_BUILD_COCOA
 
 #include "libclipboard.h"
 #include <stdlib.h>
@@ -89,6 +90,4 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
     return ret;
 }
 
-#else
-typedef int cocoa_dummy_define;
-#endif /* __APPLE__ || LIBCLIPBOARD_FORCE_COCOA */
+#endif /* LIBCLIPBOARD_BUILD_COCOA */

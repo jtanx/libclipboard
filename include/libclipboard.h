@@ -6,6 +6,26 @@
 #ifndef _LIBCLIPBOARD_H_
 #define _LIBCLIPBOARD_H_
 
+#if (defined(_WIN32) || defined(LIBCLIPBOARD_FORCE_WIN32)) && \
+    !defined(LIBCLIPBOARD_FORCE_X11) && !defined(LIBCLIPBOARD_FORCE_COCOA)
+#  define LIBCLIPBOARD_BUILD_WIN32
+#endif
+
+#if (defined(__linux__) || defined(LIBCLIPBOARD_FORCE_X11)) && \
+    !defined(LIBCLIPBOARD_FORCE_WIN32) && !defined(LIBCLIPBOARD_FORCE_COCOA)
+#  define LIBCLIPBOARD_BUILD_X11
+#endif
+
+#if (defined(__APPLE__) || defined(LIBCLIPBOARD_FORCE_COCOA)) && \
+    !defined(LIBCLIPBOARD_FORCE_WIN32) && !defined(LIBCLIPBOARD_FORCE_X11)
+#  define LIBCLIPBOARD_BUILD_COCOA
+#endif
+
+#if !defined(LIBCLIPBOARD_BUILD_WIN32) && !defined(LIBCLIPBOARD_BUILD_X11) && \
+    !defined(LIBCLIPBOARD_BUILD_COCOA)
+#  error "Unsupported platform or invalid build flags"
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -53,12 +73,6 @@ typedef struct clipboard_opts {
 
 /** Opaque data structure for a clipboard context/instance **/
 typedef struct clipboard_c clipboard_c;
-
-#if !defined(_WIN32) && !defined(LIBCLIPBOARD_FORCE_WIN32) && \
-    !defined(__linux__) && !defined(LIBCLIPBOARD_FORCE_X11) && \
-    !defined(__APPLE__) && !defined(LIBCLIPBOARD_FORCE_COCOA)
-#  error "Unsupported platform"
-#endif
 
 /**
  *  \brief Instantiates a new clipboard instance of the given type.
