@@ -20,6 +20,15 @@ struct clipboard_c {
     int max_retries;
     /** Delay (ms) between retries **/
     int retry_delay;
+
+    /** malloc **/
+    clipboard_malloc_fn malloc;
+    /** calloc **/
+    clipboard_calloc_fn calloc;
+    /** realloc **/
+    clipboard_realloc_fn realloc;
+    /** free **/
+    clipboard_free_fn free;
 };
 
 /**
@@ -67,20 +76,22 @@ static bool get_clipboard_lock(clipboard_c *cb) {
 }
 
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
-    clipboard_c *ret = calloc(1, sizeof(clipboard_c));
+    clipboard_calloc_fn calloc_fn = cb_opts && cb_opts->user_calloc_fn ? cb_opts->user_calloc_fn : calloc;
+    clipboard_c *ret = calloc_fn(1, sizeof(clipboard_c));
     if (ret == NULL) {
         return NULL;
     }
+    LC_SET_ALLOCATORS(ret, cb_opts);
 
     ret->max_retries = LC_WIN32_MAX_RETRIES_DEFAULT;
     ret->retry_delay = LC_WIN32_RETRY_DELAY_DEFAULT;
 
     if (cb_opts) {
-        if (cb_opts->win32_max_retries >= 0) {
-            ret->max_retries = cb_opts->win32_max_retries;
+        if (cb_opts->win32.max_retries >= 0) {
+            ret->max_retries = cb_opts->win32.max_retries;
         }
-        if (cb_opts->win32_retry_delay >= 0) {
-            ret->max_retries = cb_opts->win32_retry_delay;
+        if (cb_opts->win32.retry_delay >= 0) {
+            ret->max_retries = cb_opts->win32.retry_delay;
         }
     }
 
@@ -89,13 +100,13 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     wndclass.lpfnWndProc = clipboard_wnd_proc;
     wndclass.lpszClassName = _T("libclipboard");
     if (!RegisterClassEx(&wndclass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
-        free(ret);
+        ret->free(ret);
         return NULL;
     }
     ret->hwnd = CreateWindowEx(0, wndclass.lpszClassName, wndclass.lpszClassName,
                                0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
     if (ret->hwnd == NULL) {
-        free(ret);
+        ret->free(ret);
         return NULL;
     }
 
@@ -108,7 +119,7 @@ void clipboard_free(clipboard_c *cb) {
     }
 
     DestroyWindow(cb->hwnd);
-    free(cb);
+    cb->free(cb);
 }
 
 void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
@@ -149,13 +160,13 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
 
     int len_required =
         WideCharToMultiByte(CP_UTF8, 0, pData, -1, NULL, 0, NULL, NULL);
-    if (len_required != 0 && (ret = calloc(len_required, sizeof(char))) != NULL) {
+    if (len_required != 0 && (ret = cb->calloc(len_required, sizeof(char))) != NULL) {
         int len_actual =
             WideCharToMultiByte(CP_UTF8, 0, pData, -1, ret, len_required,
                                 NULL, NULL);
 
         if (len_actual == 0) {
-            free(ret);
+            cb->free(ret);
             ret = NULL;
         } else if (length) {
             /* Length excluding the NULL terminator */

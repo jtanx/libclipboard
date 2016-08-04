@@ -18,19 +18,30 @@ struct clipboard_c {
     NSPasteboard *pb;
     /** Pasteboard serial at last check **/
     volatile long last_cb_serial;
+
+    /** malloc **/
+    clipboard_malloc_fn malloc;
+    /** calloc **/
+    clipboard_calloc_fn calloc;
+    /** realloc **/
+    clipboard_realloc_fn realloc;
+    /** free **/
+    clipboard_free_fn free;
 };
 
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
-    clipboard_c *cb = calloc(1, sizeof(clipboard_c));
+    clipboard_calloc_fn calloc_fn = cb_opts && cb_opts->user_calloc_fn ? cb_opts->user_calloc_fn : calloc;
+    clipboard_c *cb = calloc_fn(1, sizeof(clipboard_c));
     if (cb == NULL) {
         return NULL;
     }
+    LC_SET_ALLOCATORS(cb, cb_opts);
     cb->pb = [NSPasteboard generalPasteboard];
     return cb;
 }
 
 void clipboard_free(clipboard_c *cb) {
-    free(cb);
+    cb->free(cb);
 }
 
 void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
@@ -64,7 +75,7 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
 
     utf8_clip = [ns_clip UTF8String];
     len = strlen(utf8_clip);
-    ret = malloc(len + 1);
+    ret = cb->malloc(len + 1);
     if (ret != NULL) {
         memcpy(ret, utf8_clip, len);
         ret[len] = '\0';

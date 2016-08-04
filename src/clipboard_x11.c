@@ -95,6 +95,15 @@ struct clipboard_c {
 
     /** Selection data **/
     selection_c selections[LC_MODE_END];
+
+    /** malloc **/
+    clipboard_malloc_fn malloc;
+    /** calloc **/
+    clipboard_calloc_fn calloc;
+    /** realloc **/
+    clipboard_realloc_fn realloc;
+    /** free **/
+    clipboard_free_fn free;
 };
 
 /**
@@ -129,7 +138,7 @@ static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char con
         }
 
         atoms[i].atom = reply->atom;
-        free(reply);
+        free(reply); /* XCB: Do not use custom allocators */
     }
 
     return true;
@@ -171,7 +180,7 @@ static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e)
     for (int i = 0; i < LC_MODE_END; i++) {
         if (cb->selections[i].xmode == e->selection && (pthread_mutex_lock(&cb->mu) == 0)) {
             xcb_atom_t xmode = cb->selections[i].xmode;
-            free(cb->selections[i].data);
+            cb->free(cb->selections[i].data);
             memset(&cb->selections[i], 0, sizeof(selection_c));
             cb->selections[i].xmode = xmode;
             pthread_mutex_unlock(&cb->mu);
@@ -201,7 +210,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
     }
 
     while (bytes_after > 0) {
-        free(reply);
+        free(reply); /* XCB: Do not use custom allocators */
         xcb_get_property_cookie_t ck = xcb_get_property(cb->xc, true, cb->xw,
                                        e->property, XCB_ATOM_ANY,
                                        bufsiz / 4, cb->transfer_size / 4);
@@ -209,7 +218,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
         /* reply->format should be 8, 16 or 32. */
         if (reply == NULL || (bufsiz > 0 && (reply->format != actual_format || reply->type != actual_type)) || ((reply->format % 8) != 0)) {
             fprintf(stderr, "x11_retrieve_selection: [Err] Invalid return value from xcb_get_property_reply\n");
-            free(buf);
+            cb->free(buf);
             buf = NULL;
             break;
         }
@@ -225,13 +234,13 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
         if (nitems > 0) {
             if ((bufsiz % 4) != 0) {
                 fprintf(stderr, "x11_retrieve_selection: [Err] Got more data but read data size is not a multiple of 4\n");
-                free(buf);
+                cb->free(buf);
                 buf = NULL;
                 break;
             }
 
             size_t unit_size = (reply->format / 8);
-            buf = realloc(buf, unit_size * (bufsiz + nitems));
+            buf = cb->realloc(buf, unit_size * (bufsiz + nitems));
             if (buf == NULL) {
                 fprintf(stderr, "x11_retrieve_selection: [Err] realloc failed\n");
                 break;
@@ -243,7 +252,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
 
         bytes_after = reply->bytes_after;
     }
-    free(reply);
+    free(reply); /* XCB: Do not use custom allocators */
 
     if (buf != NULL && (pthread_mutex_lock(&cb->mu) == 0)) {
         selection_c *sel = NULL;
@@ -255,7 +264,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
         }
 
         if (sel != NULL && sel->target == actual_type) {
-            free(sel->data);
+            cb->free(sel->data);
             sel->data = buf;
             sel->length = bufsiz;
             buf = NULL;
@@ -266,7 +275,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
         pthread_cond_broadcast(&cb->cond);
         pthread_mutex_unlock(&cb->mu);
     }
-    free(buf);
+    cb->free(buf);
 }
 
 /**
@@ -346,7 +355,7 @@ static void *x11_event_loop(void *arg) {
             /* I think this cast is appropriate... */
             xcb_generic_error_t *err = (xcb_generic_error_t *) e;
             fprintf(stderr, "x11_event_loop: [Warn] Received X11 error: %d\n", err->error_code);
-            free(e);
+            free(e); /* XCB: Do not use custom allocators */
             continue;
         }
 
@@ -354,7 +363,7 @@ static void *x11_event_loop(void *arg) {
             case XCB_DESTROY_NOTIFY: {
                 xcb_destroy_notify_event_t *evt = (xcb_destroy_notify_event_t *)e;
                 if (evt->window == cb->xw) {
-                    free(e);
+                    free(e); /* XCB: Do not use custom allocators */
                     return NULL;
                 }
             }
@@ -390,7 +399,7 @@ static void *x11_event_loop(void *arg) {
                 /* Ignore unknown messages */
             }
         }
-        free(e);
+        free(e); /* XCB: Do not use custom allocators */
     }
 
     fprintf(stderr, "x11_event_loop: [Warn] xcb_wait_for_event returned NULL\n");
@@ -399,24 +408,26 @@ static void *x11_event_loop(void *arg) {
 
 clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
-        .x11_display_name = NULL,
-        .x11_action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
-        .x11_transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT,
+        .x11.display_name = NULL,
+        .x11.action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
+        .x11.transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT,
     };
 
     if (cb_opts == NULL) {
         cb_opts = &defaults;
     }
 
-    clipboard_c *cb = calloc(1, sizeof(clipboard_c));
+    clipboard_calloc_fn calloc_fn = cb_opts->user_calloc_fn ? cb_opts->user_calloc_fn : calloc;
+    clipboard_c *cb = calloc_fn(1, sizeof(clipboard_c));
     if (cb == NULL) {
         return NULL;
     }
+    LC_SET_ALLOCATORS(cb, cb_opts);
 
-    cb->action_timeout = cb_opts->x11_action_timeout > 0 ?
-                         cb_opts->x11_action_timeout : LC_X11_ACTION_TIMEOUT_DEFAULT;
+    cb->action_timeout = cb_opts->x11.action_timeout > 0 ?
+                         cb_opts->x11.action_timeout : LC_X11_ACTION_TIMEOUT_DEFAULT;
     /* Round down to nearest multiple of 4 */
-    cb->transfer_size = (cb_opts->x11_transfer_size / 4) * 4;
+    cb->transfer_size = (cb_opts->x11.transfer_size / 4) * 4;
     if (cb->transfer_size == 0) {
         cb->transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT;
     }
@@ -434,7 +445,7 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     }
 
     int preferred_screen;
-    cb->xc = xcb_connect(cb_opts->x11_display_name, &preferred_screen);
+    cb->xc = xcb_connect(cb_opts->x11.display_name, &preferred_screen);
     assert(cb->xc != NULL); /* Docs say return is never NULL */
     if (xcb_connection_has_error(cb->xc) != 0) {
         clipboard_free(cb);
@@ -464,7 +475,7 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     if (err != NULL) {
         cb->xw = 0;
         /* Am I meant to free this? */
-        free(err);
+        free(err); /* XCB: Do not use custom allocators */
         clipboard_free(cb);
         return NULL;
     }
@@ -507,11 +518,11 @@ void clipboard_free(clipboard_c *cb) {
     /* Free selection data */
     for (int i = 0; i < LC_MODE_END; i++) {
         if (cb->selections[i].data != NULL) {
-            free(cb->selections[i].data);
+            cb->free(cb->selections[i].data);
         }
     }
 
-    free(cb);
+    cb->free(cb);
 }
 
 void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
@@ -560,7 +571,7 @@ bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
  */
 static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **ret, int *length) {
     if (sel->data != NULL && sel->target == cb->std_atoms[X_ATOM_UTF8_STRING].atom) {
-        *ret = malloc(sizeof(char) * (sel->length + 1));
+        *ret = cb->malloc(sizeof(char) * (sel->length + 1));
         if (*ret != NULL) {
             memcpy(*ret, sel->data, sel->length);
             (*ret)[sel->length] = '\0';
@@ -594,13 +605,13 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
             if (owner == NULL || owner->owner == 0) {
                 /* No selection owner; no data available */
                 pthread_mutex_unlock(&cb->mu);
-                free(owner);
+                free(owner); /* XCB: Do not use custom allocators */
                 return NULL;
             }
-            free(owner);
+            free(owner); /* XCB: Do not use custom allocators */
 
             /* Unset any old value */
-            free(sel->data);
+            cb->free(sel->data);
             sel->data = NULL;
             sel->length = 0;
 
@@ -641,13 +652,13 @@ bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboa
     if (pthread_mutex_lock(&cb->mu) == 0) {
         selection_c *sel = &cb->selections[mode];
         if (sel->data != NULL) {
-            free(sel->data);
+            cb->free(sel->data);
         }
         if (length < 0) {
             length = strlen(src);
         }
 
-        sel->data = malloc(sizeof(char) * (length + 1));
+        sel->data = cb->malloc(sizeof(char) * (length + 1));
         if (sel->data != NULL) {
             memcpy(sel->data, src, length);
             sel->data[length] = '\0';
