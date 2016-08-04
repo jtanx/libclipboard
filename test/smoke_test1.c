@@ -4,9 +4,8 @@
  */
 
 #ifndef _WIN32
-#  ifndef _BSD_SOURCE
-#    define _BSD_SOURCE
-#  endif
+#  define _DEFAULT_SOURCE
+#  define _BSD_SOURCE
 #  include <unistd.h>
 #else
 #  include <windows.h>
