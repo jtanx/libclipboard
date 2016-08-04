@@ -1,0 +1,33 @@
+platform:
+  - x64
+branches:
+  only:
+  - master
+clone_depth: 10
+environment:
+  global:
+    MBASH: C:\msys64\usr\bin\sh -lc
+    PMOPTS: -S --needed --noconfirm --noprogressbar
+  matrix:
+    - MINGW_INSTALLS: mingw32
+      MBITS: 32
+      MPREF: i686
+      MSYSTEM: MINGW32
+    - MINGW_INSTALLS: mingw64
+      MBITS: 64
+      MPREF: x86_64
+      MSYSTEM: MINGW64
+
+install:
+  - git submodule update --init --recursive
+  - call %MBASH% ""
+  - call %MBASH% "pacman -Syuu --noconfirm"
+  - call %MBASH% "pacman -Suu --noconfirm"
+  - call %MBASH% "pacman $PMOPTS mingw-w64-$MPREF-{gcc,cmake}"
+build_script:
+  - call %MBASH% "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cmake '-GMSYS Makefiles' -Dtest=on -Dsamples=on .; make check -j4"
+  - call %MBASH% "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cmake '-GMSYS Makefiles' -DBUILD_SHARED_LIBS=on .; make -j4"
+  - 7z a -t7z -mx9 mingw-w64-%MPREF%-libclipboard.7z include/ lib/ bin/libclipboard.dll -x!lib/libgtest*
+artifacts:
+  - path: "*.7z"
+    name: libclipboard_$(MBITS)

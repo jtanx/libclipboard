@@ -1,4 +1,4 @@
-libclipboard [![Build Status](https://travis-ci.org/jtanx/libclipboard.png)](https://travis-ci.org/jtanx/libclipboard)
+libclipboard [![Linux Build Status](https://travis-ci.org/jtanx/libclipboard.png)](https://travis-ci.org/jtanx/libclipboard) [![Win32 Build status](https://ci.appveyor.com/api/projects/status/r1oanfx5kd18xfxa?svg=true)](https://ci.appveyor.com/project/jtanx/libclipboard)
 =========
 
 A cross-platform clipboard library.
