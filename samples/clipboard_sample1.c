@@ -112,7 +112,7 @@ void do_interactive(clipboard_c *cb, app_opts *opts) {
 
 int help(const char *name, bool was_error) {
     printf("Usage: %s [-p[=mode]] [-c[=mode]] [-i[=mode]] [-s[=mode] [text]...]\n", name);
-    printf("Sample clipboard application.\n\n");
+    printf("Sample clipboard application. Library version: %d.%d\n\n", LIBCLIPBOARD_VERSION_MAJOR, LIBCLIPBOARD_VERSION_MINOR);
     printf("With no options, the default is to dump the CLIPBOARD clipboard to stdout.\n");
     printf("Available modes: CLIPBOARD, SELECTION\n");
     printf("Default mode: CLIPBOARD\n\n");
