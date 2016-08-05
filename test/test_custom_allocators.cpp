@@ -7,8 +7,6 @@
  */
 #include <gtest/gtest.h>
 #include <libclipboard.h>
-#include <vector>
-#include <iostream>
 #include <atomic>
 #include <assert.h>
 

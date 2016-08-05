@@ -41,7 +41,9 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
 }
 
 void clipboard_free(clipboard_c *cb) {
-    cb->free(cb);
+    if (cb) {
+        cb->free(cb);
+    }
 }
 
 void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {

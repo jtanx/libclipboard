@@ -41,11 +41,32 @@ TEST_F(BasicsTest, TestMultipleInstantiation) {
     clipboard_free(cb1);
 }
 
+TEST_F(BasicsTest, TestClipboardFreeWithNull) {
+    /* Just make sure it doesn't segfault */
+    clipboard_free(NULL);
+}
+
 TEST_F(BasicsTest, TestClearingClipboard) {
     clipboard_c *cb = clipboard_new(NULL);
-    clipboard_clear(cb, LC_CLIPBOARD);
 
+    clipboard_set_text_ex(cb, "cleartest", -1, LC_CLIPBOARD);
+    clipboard_clear(NULL, LC_CLIPBOARD);
+#ifdef LIBCLIPBOARD_BUILD_X11
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
+    sleep_for(milliseconds(100));
+#endif
     char *text = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
+    ASSERT_TRUE(text != NULL);
+    ASSERT_STREQ("cleartest", text);
+    free(text);
+
+    clipboard_clear(cb, LC_CLIPBOARD);
+#ifdef LIBCLIPBOARD_BUILD_X11
+    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
+    sleep_for(milliseconds(100));
+#endif
+
+    text = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
     ASSERT_TRUE(text == NULL);
 
     clipboard_free(cb);
