@@ -408,7 +408,7 @@ static void *x11_event_loop(void *arg) {
     return NULL;
 }
 
-clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
+LCB_EX clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11.display_name = NULL,
         .x11.action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
@@ -492,7 +492,7 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     return cb;
 }
 
-void clipboard_free(clipboard_c *cb) {
+LCB_EX void LCB_CC clipboard_free(clipboard_c *cb) {
     if (cb == NULL) {
         return;
     }
@@ -527,7 +527,7 @@ void clipboard_free(clipboard_c *cb) {
     cb->free(cb);
 }
 
-void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
+LCB_EX void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     if (cb == NULL || cb->xc == NULL) {
         return;
     }
@@ -549,7 +549,7 @@ void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     xcb_flush(cb->xc);
 }
 
-bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
+LCB_EX bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     bool ret = false;
 
     if (mode != LC_CLIPBOARD && mode != LC_SELECTION) {
@@ -585,7 +585,7 @@ static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **re
     }
 }
 
-char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
+LCB_EX char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
     if (cb == NULL || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {
@@ -644,7 +644,7 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     return ret;
 }
 
-bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
+LCB_EX bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     bool ret = false;
 
     if (cb == NULL || src == NULL || length == 0 || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {

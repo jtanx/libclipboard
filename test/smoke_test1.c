@@ -24,7 +24,7 @@
 #define N_ITER 500
 
 int main(int argc, char *argv[]) {
-    srand(time(NULL));
+    srand((unsigned int)time(NULL));
 
     for (int i = 0; i < N_ITER; i++) {
         clipboard_c *cb = clipboard_new(NULL);

@@ -53,6 +53,7 @@ doxygen_sqlite3.db
 Win32/
 *.dir/
 *.vcxproj
+*.vcxproj.user
 *.opensdf
 *.sdf
 *.sln

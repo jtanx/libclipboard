@@ -33,7 +33,7 @@ struct clipboard_c {
     clipboard_free_fn free;
 };
 
-clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
+LCB_EX clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     clipboard_calloc_fn calloc_fn = cb_opts && cb_opts->user_calloc_fn ? cb_opts->user_calloc_fn : calloc;
     clipboard_c *cb = calloc_fn(1, sizeof(clipboard_c));
     if (cb == NULL) {
@@ -44,26 +44,26 @@ clipboard_c *clipboard_new(clipboard_opts *cb_opts) {
     return cb;
 }
 
-void clipboard_free(clipboard_c *cb) {
+LCB_EX void LCB_CC clipboard_free(clipboard_c *cb) {
     if (cb) {
         cb->free(cb);
     }
 }
 
-void clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
+LCB_EX void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     if (cb != NULL) {
         [cb->pb clearContents];
     }
 }
 
-bool clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
+LCB_EX bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     if (cb) {
         return [cb->pb changeCount] == cb->last_cb_serial;
     }
     return false;
 }
 
-char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
+LCB_EX char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     NSString *ns_clip;
     const char *utf8_clip;
     char *ret;
@@ -93,7 +93,7 @@ char *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     return ret;
 }
 
-bool clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
+LCB_EX bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     if (cb == NULL || src == NULL || length == 0) {
         return false;
     }
