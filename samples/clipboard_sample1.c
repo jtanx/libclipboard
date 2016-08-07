@@ -10,6 +10,7 @@
 #include <libclipboard.h>
 
 typedef struct app_opts {
+    bool opt_set;
     bool interactive;
     bool dump_clipboard;
     bool clear_clipboard;
@@ -172,24 +173,28 @@ int main(int argc, char *argv[]) {
                     break;
                 case 'p':
                     opts.dump_clipboard = !opts.dump_clipboard;
+                    opts.opt_set = true;
                     if (!parse_mode(argv[0], argv[i], &opts)) {
                         return 1;
                     }
                     break;
                 case 's':
                     opts.set_clipboard = true;
+                    opts.opt_set = true;
                     if (!parse_mode(argv[0], argv[i], &opts)) {
                         return 1;
                     }
                     break;
                 case 'c':
                     opts.clear_clipboard = !opts.clear_clipboard;
+                    opts.opt_set = true;
                     if (!parse_mode(argv[0], argv[i], &opts)) {
                         return 1;
                     }
                     break;
                 case 'i':
                     opts.interactive = !opts.interactive;
+                    opts.opt_set = true;
                     if (!parse_mode(argv[0], argv[i], &opts)) {
                         return 1;
                     }
@@ -214,7 +219,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (opts.dump_clipboard) {
+    if (opts.dump_clipboard || !opts.opt_set) {
         char *text = clipboard_text_ex(cb, NULL, opts.mode);
         if (text != NULL) {
             printf("%s\n", text);
