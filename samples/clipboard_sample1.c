@@ -148,7 +148,7 @@ bool parse_mode(const char *name, const char *arg, app_opts *opts) {
     return true;
 }
 
-char *grow_buffer(char *dst, size_t *cur_sz, char *src) {
+char *grow_buffer(char *dst, size_t *cur_sz, const char *src, bool add_sep) {
     size_t len = strlen(src);
     dst = realloc(dst, *cur_sz + len + 2);
     if (dst == NULL) {
@@ -158,9 +158,14 @@ char *grow_buffer(char *dst, size_t *cur_sz, char *src) {
         memcpy(dst, src, len);
         *cur_sz += len;
     } else {
-        dst[*cur_sz] = ' ';
-        memcpy(dst + (*cur_sz) + 1, src, len);
-        *cur_sz += len + 1;
+        if (add_sep) {
+            dst[*cur_sz] = ' ';
+            memcpy(dst + (*cur_sz) + 1, src, len);
+            *cur_sz += len + 1;
+        } else {
+            memcpy(dst + (*cur_sz), src, len);
+            *cur_sz += len;
+        }
     }
     return dst;
 }
@@ -240,7 +245,7 @@ int main(int argc, char *argv[]) {
         size_t sz = 0;
 
         for (; i < argc; i++) {
-            data = grow_buffer(data, &sz, argv[i]);
+            data = grow_buffer(data, &sz, argv[i], true);
             if (data == NULL) {
                 printf("realloc call failed!\n");
                 return 1;
@@ -253,7 +258,7 @@ int main(int argc, char *argv[]) {
         } else {
             char buf[BUFSIZ];
             while (fgets(buf, BUFSIZ, stdin)) {
-                data = grow_buffer(data, &sz, buf);
+                data = grow_buffer(data, &sz, buf, false);
                 if (data == NULL) {
                     printf("realloc call failed!\n");
                     return 1;
