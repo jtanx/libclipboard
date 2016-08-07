@@ -79,7 +79,7 @@ static bool get_clipboard_lock(clipboard_c *cb) {
     return false;
 }
 
-LCB_EX clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
+clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     clipboard_calloc_fn calloc_fn = cb_opts && cb_opts->user_calloc_fn ? cb_opts->user_calloc_fn : calloc;
     clipboard_c *ret = calloc_fn(1, sizeof(clipboard_c));
     if (ret == NULL) {
@@ -117,7 +117,7 @@ LCB_EX clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     return ret;
 }
 
-LCB_EX void LCB_CC clipboard_free(clipboard_c *cb) {
+void LCB_CC clipboard_free(clipboard_c *cb) {
     if (cb == NULL) {
         return;
     }
@@ -126,7 +126,7 @@ LCB_EX void LCB_CC clipboard_free(clipboard_c *cb) {
     cb->free(cb);
 }
 
-LCB_EX void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
+void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     if (cb == NULL) {
         return;
     }
@@ -139,11 +139,11 @@ LCB_EX void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     CloseClipboard();
 }
 
-LCB_EX bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
+bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     return cb && (GetClipboardOwner() == cb->hwnd);
 }
 
-LCB_EX char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
+char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
     if (cb == NULL || !get_clipboard_lock(cb)) {
@@ -183,7 +183,7 @@ LCB_EX char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mo
     return ret;
 }
 
-LCB_EX bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
+bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     if (cb == NULL || src == NULL || length == 0) {
         return false;
     }

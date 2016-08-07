@@ -1,0 +1,10 @@
+LIBRARY clipboard
+EXPORTS
+    clipboard_new
+    clipboard_free
+    clipboard_clear
+    clipboard_has_ownership
+    clipboard_text_ex
+    clipboard_text
+    clipboard_set_text_ex
+    clipboard_set_text

@@ -56,6 +56,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Make the library
 option (BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" OFF)
+if (MSVC AND BUILD_SHARED_LIBS)
+    set(SOURCE ${SOURCE} libclipboard.def)
+endif()
 add_library(clipboard ${HEADERS} ${SOURCE})
 target_link_libraries(clipboard LINK_PRIVATE ${LIBCLIPBOARD_PRIVATE_LIBS})
 option (LIBCLIPBOARD_ADD_SOVERSION "Add soname versions to the built library (default:off)" OFF)
