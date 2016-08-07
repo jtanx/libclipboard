@@ -40,7 +40,7 @@ struct {
 
 static void *mock_malloc(size_t size) {
     g_alloc_counts.malloc_count++;
-    if (g_alloc_ptrs.malloc_ptr) {
+    if (g_alloc_ptrs.malloc_ptr.load()) {
         void *ret;
         ret = g_alloc_ptrs.malloc_ptr.load()(size);
         assert(ret != NULL);
@@ -52,7 +52,7 @@ static void *mock_malloc(size_t size) {
 
 static void *mock_calloc(size_t nmemb, size_t size) {
     g_alloc_counts.calloc_count++;
-    if (g_alloc_ptrs.calloc_ptr) {
+    if (g_alloc_ptrs.calloc_ptr.load()) {
         void *ret;
         ret = g_alloc_ptrs.calloc_ptr.load()(nmemb, size);
         assert(ret != NULL);
@@ -67,7 +67,7 @@ static void *mock_realloc(void *ptr, size_t size) {
     if (ptr == NULL) {
         g_alloc_counts.malloc_count++;
     }
-    if (g_alloc_ptrs.realloc_ptr) {
+    if (g_alloc_ptrs.realloc_ptr.load()) {
         void *ret;
         ret = g_alloc_ptrs.realloc_ptr.load()(ptr, size);
         assert(ret != NULL);
@@ -79,7 +79,7 @@ static void *mock_realloc(void *ptr, size_t size) {
 
 static void mock_free(void *ptr) {
     g_alloc_counts.free_count++;
-    if (g_alloc_ptrs.free_ptr) {
+    if (g_alloc_ptrs.free_ptr.load()) {
         g_alloc_ptrs.free_ptr.load()(ptr);
     }
 }
