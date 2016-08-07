@@ -1,6 +1,10 @@
 /**
  *  \file test_basics.cpp
  *  \brief Basic unit tests
+ *
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
  */
 #include <gtest/gtest.h>
 #include <libclipboard.h>

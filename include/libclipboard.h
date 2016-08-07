@@ -1,12 +1,18 @@
 /**
-*  \file  libclipboard.h
-*  \brief Main header file
-*/
+ *  \file  libclipboard.h
+ *  \brief Main header file
+ *
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
+ */
 
 #ifndef _LIBCLIPBOARD_H_
 #define _LIBCLIPBOARD_H_
 
+/** Major version of libclipboard **/
 #define LIBCLIPBOARD_VERSION_MAJOR 1
+/** Minor version of libclipboard **/
 #define LIBCLIPBOARD_VERSION_MINOR 0
 
 #if (defined(_WIN32) || defined(LIBCLIPBOARD_FORCE_WIN32)) && \

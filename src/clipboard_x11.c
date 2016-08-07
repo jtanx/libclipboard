@@ -2,7 +2,9 @@
  *  \file clipboard_x11.c
  *  \brief X11 implementation of the clipboard.
  *
- *  Blegh I hate X11
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
  */
 
 #include "libclipboard.h"

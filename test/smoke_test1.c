@@ -1,6 +1,10 @@
 /**
  *  \file smoke_test1.c
  *  \brief Simple test of fast init/deinit to weed out race conditions
+ *
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
  */
 
 #ifndef _WIN32

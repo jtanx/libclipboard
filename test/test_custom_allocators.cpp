@@ -2,6 +2,12 @@
  *  \file test_custom_allocators.cpp
  *  \brief Custom allocators test
  *
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
+ */
+
+/*
  *  I thought about using gmock and came to the conclusion that it's easier
  *  to make my own mocks. Tests should *not* be run in parallel.
  */

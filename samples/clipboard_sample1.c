@@ -1,6 +1,10 @@
 /**
- *  \file clipboard_test.c
+ *  \file clipboard_sample1.c
  *  \brief Test application for clipboard
+ *
+ *  \copyright Copyright (C) 2016 Jeremy Tan.
+ *             This file is released under the MIT license.
+ *             See LICENSE for details.
  */
 
 #include <stdio.h>
