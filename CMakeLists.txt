@@ -103,7 +103,7 @@ if (LIBCLIPBOARD_ADD_SOVERSION)
 endif()
 
 # Testing mode?
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest)
     # gtest does not play well with pthreads and mingw
     if (gtest_disable_pthreads)
         set(LIBCLIPBOARD_USE_PTHREADS_INIT ${CMAKE_USE_PTHREADS_INIT})
