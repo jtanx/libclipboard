@@ -38,7 +38,7 @@ cd libclipboard
 git submodule init
 git submodule update
 git clean -dxf            (if you had a previous build)
-cmake -Dtest=on -Dsamples=on .
+cmake .
 make check -j4
 ~~~~~
 
@@ -51,6 +51,20 @@ To build a shared library instead of a static library
 ~~~~~
 cmake -DBUILD_SHARED_LIBS=ON
 ~~~~~
+
+To build the library using the stdcall calling convention
+~~~~~
+cmake -DLIBCLIPBOARD_USE_STDCALL=on
+~~~~~
+
+To force the build of a particular backend, choose one of
+~~~~~
+cmake -DLIBCLIPBOARD_FORCE_WIN32=on
+cmake -DLIBCLIPBOARD_FORCE_X11=on
+cmake -DLIBCLIPBOARD_FORCE_COCOA=on
+~~~~~
+
+Note: This setting has only been tested for compiling the X11 backend on Windows.
 
 To uninstall
 ~~~~~

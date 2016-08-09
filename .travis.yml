@@ -28,6 +28,8 @@ before_script:
 script:
   - $CXX --version
   - $CC --version
-  - cmake -Dtest=on -Dsamples=on .
-  - make
-  - make check
+  - cmake .
+  - make check -j4
+  - git clean -dxf
+  - cmake -DBUILD_SHARED_LIBS=on
+  - make check -j4
