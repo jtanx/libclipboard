@@ -116,9 +116,17 @@ typedef struct clipboard_opts {
 
     /** Win32 specific options **/
     struct clipboard_opts_win32 {
-        /** Max number of retries to try to obtain clipboard lock **/
+        /**
+         *  Max number of retries to try to obtain clipboard lock.
+         *  If max_retries is zero, the default value will be used.
+         *  Specify a negative value for zero retries.
+         */
         int max_retries;
-        /** Delay in ms between retries to obtain clipboard lock **/
+        /**
+         *  Delay in ms between retries to obtain clipboard lock.
+         *  If retry_delay is zero, the default value will be used.
+         *  Specify a negative value for no (zero) delay.
+         */
         int retry_delay;
     } win32;
 
