@@ -21,6 +21,11 @@
 #include <xcb/xcb.h>
 #include <pthread.h>
 
+/* X11 headers are borked */
+#if defined(__MINGW32__) && defined(gettimeofday)
+#  undef gettimeofday
+#endif
+
 /**
  *  Enumeration of standard X11 atom identifiers
  */
@@ -380,18 +385,15 @@ static void *x11_event_loop(void *arg) {
             break;
             case XCB_SELECTION_REQUEST: {
                 xcb_selection_request_event_t *req = (xcb_selection_request_event_t *)e;
-
-                if (x11_transmit_selection(cb, req)) {
-                    xcb_selection_notify_event_t notify = {0};
-                    notify.response_type = XCB_SELECTION_NOTIFY;
-                    notify.time = XCB_CURRENT_TIME;
-                    notify.requestor = req->requestor;
-                    notify.selection = req->selection;
-                    notify.target = req->target;
-                    notify.property = req->property;
-                    xcb_send_event(cb->xc, false, req->requestor, XCB_EVENT_MASK_PROPERTY_CHANGE, (char *)&notify);
-                    xcb_flush(cb->xc);
-                }
+                xcb_selection_notify_event_t notify = {0};
+                notify.response_type = XCB_SELECTION_NOTIFY;
+                notify.time = XCB_CURRENT_TIME;
+                notify.requestor = req->requestor;
+                notify.selection = req->selection;
+                notify.target = req->target;
+                notify.property = x11_transmit_selection(cb, req) ? req->property : XCB_NONE;
+                xcb_send_event(cb->xc, false, req->requestor, XCB_EVENT_MASK_PROPERTY_CHANGE, (char *)&notify);
+                xcb_flush(cb->xc);
             }
             break;
             case XCB_PROPERTY_NOTIFY: {
@@ -408,7 +410,7 @@ static void *x11_event_loop(void *arg) {
     return NULL;
 }
 
-clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
+LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11.display_name = NULL,
         .x11.action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
@@ -492,7 +494,7 @@ clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     return cb;
 }
 
-void LCB_CC clipboard_free(clipboard_c *cb) {
+LCB_API void LCB_CC clipboard_free(clipboard_c *cb) {
     if (cb == NULL) {
         return;
     }
@@ -527,7 +529,7 @@ void LCB_CC clipboard_free(clipboard_c *cb) {
     cb->free(cb);
 }
 
-void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
+LCB_API void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     if (cb == NULL || cb->xc == NULL) {
         return;
     }
@@ -549,7 +551,7 @@ void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     xcb_flush(cb->xc);
 }
 
-bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
+LCB_API bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     bool ret = false;
 
     if (mode != LC_CLIPBOARD && mode != LC_SELECTION) {
@@ -585,7 +587,7 @@ static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **re
     }
 }
 
-char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
+LCB_API char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
     if (cb == NULL || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {
@@ -644,7 +646,7 @@ char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode
     return ret;
 }
 
-bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
+LCB_API bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     bool ret = false;
 
     if (cb == NULL || src == NULL || length == 0 || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {

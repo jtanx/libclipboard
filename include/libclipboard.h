@@ -10,41 +10,45 @@
 #ifndef _LIBCLIPBOARD_H_
 #define _LIBCLIPBOARD_H_
 
-/** Major version of libclipboard **/
-#define LIBCLIPBOARD_VERSION_MAJOR 1
-/** Minor version of libclipboard **/
-#define LIBCLIPBOARD_VERSION_MINOR 0
-
-#if (defined(_WIN32) || defined(LIBCLIPBOARD_FORCE_WIN32)) && \
-    !defined(LIBCLIPBOARD_FORCE_X11) && !defined(LIBCLIPBOARD_FORCE_COCOA)
-#  define LIBCLIPBOARD_BUILD_WIN32
-#endif
-
-#if (defined(__linux__) || defined(LIBCLIPBOARD_FORCE_X11)) && \
-    !defined(LIBCLIPBOARD_FORCE_WIN32) && !defined(LIBCLIPBOARD_FORCE_COCOA)
-#  define LIBCLIPBOARD_BUILD_X11
-#endif
-
-#if (defined(__APPLE__) || defined(LIBCLIPBOARD_FORCE_COCOA)) && \
-    !defined(LIBCLIPBOARD_FORCE_WIN32) && !defined(LIBCLIPBOARD_FORCE_X11)
-#  define LIBCLIPBOARD_BUILD_COCOA
-#endif
-
-#if !defined(LIBCLIPBOARD_BUILD_WIN32) && !defined(LIBCLIPBOARD_BUILD_X11) && \
-    !defined(LIBCLIPBOARD_BUILD_COCOA)
-#  error "Unsupported platform or invalid build flags"
-#endif
-
-/* Play nice with PInvoke which defaults to stdcall */
-#if defined(LIBCLIPBOARD_BUILD_WIN32) && !defined(_WIN64)
-#  define LCB_CC __stdcall
-#else
-#  define LCB_CC
-#endif
-
+#include "libclipboard-config.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+/* Symbol exports and calling convention logic */
+#if defined(_WIN32) || defined(__CYGWIN__)
+#  define LIBCLIPBOARD_DLL_IMPORT __declspec(dllimport)
+#  define LIBCLIPBOARD_DLL_EXPORT __declspec(dllexport)
+#  define LIBCLIPBOARD_DLL_LOCAL
+#  if defined(LIBCLIPBOARD_USE_STDCALL) && !defined(_WIN64)
+#    define LCB_CC __stdcall
+#  else
+#    define LCB_CC
+#  endif
+#else
+#  if __GNUC__ >= 4
+#    define LIBCLIPBOARD_DLL_IMPORT __attribute__ ((visibility ("default")))
+#    define LIBCLIPBOARD_DLL_EXPORT __attribute__ ((visibility ("default")))
+#    define LIBCLIPBOARD_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+#  else
+#    define LIBCLIPBOARD_DLL_IMPORT
+#    define LIBCLIPBOARD_DLL_EXPORT
+#    define LIBCLIPBOARD_DLL_LOCAL
+#  endif
+#  define LCB_CC
+#endif
+
+#ifdef LIBCLIPBOARD_BUILD_SHARED
+#  ifdef clipboard_EXPORTS /* Defined by CMake when we're compiling the shared library */
+#    define LCB_API LIBCLIPBOARD_DLL_EXPORT
+#  else
+#    define LCB_API LIBCLIPBOARD_DLL_IMPORT
+#  endif
+#  define LCB_LOCAL LIBCLIPBOARD_DLL_LOCAL
+#else
+#  define LCB_API
+#  define LCB_LOCAL
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -137,14 +141,14 @@ typedef struct clipboard_c clipboard_c;
  *  \param [in] cb_opts Implementation specific options (optional).
  *  \return The new clipboard instance, or NULL on failure.
  */
-clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts);
+LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts);
 
 /**
  *  \brief Frees associated clipboard data from the provided structure.
  *
  *  \param [in] cb The clipboard to be freed.
  */
-void LCB_CC clipboard_free(clipboard_c *cb);
+LCB_API void LCB_CC clipboard_free(clipboard_c *cb);
 
 /**
  *  \brief Clears the contents of the given clipboard.
@@ -152,7 +156,7 @@ void LCB_CC clipboard_free(clipboard_c *cb);
  *  \param [in] cb The clipboard to clear.
  *  \param [in] mode Which clipboard to clear (platform dependent)
  */
-void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode);
+LCB_API void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode);
 
 /**
  *  \brief Determines if the clipboard is currently owned
@@ -161,7 +165,7 @@ void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode);
  *  \param [in] mode Which clipboard to clear (platform dependent)
  *  \return true iff the clipboard data is owned by the provided instance.
  */
-bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode);
+LCB_API bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode);
 
 /**
  *  \brief Retrieves the text currently held on the clipboard.
@@ -173,7 +177,7 @@ bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode);
  *  \return A copy to the retrieved text. This must be free()'d by the user.
  *          Note that the text is encoded in UTF-8 format.
  */
-char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode);
+LCB_API char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode);
 
 /**
  *  \brief Simplified version of clipboard_text_ex
@@ -183,7 +187,7 @@ char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode
  *
  *  \details This function assumes LC_CLIPBOARD as the clipboard mode.
  */
-char *LCB_CC clipboard_text(clipboard_c *cb);
+LCB_API char *LCB_CC clipboard_text(clipboard_c *cb);
 
 /**
  *  \brief Sets the text for the provided clipboard.
@@ -198,7 +202,7 @@ char *LCB_CC clipboard_text(clipboard_c *cb);
  *  \details If the length parameter is -1, src is treated as a NULL-terminated
  *           string and its length will be determined automatically.
  */
-bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode);
+LCB_API bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode);
 
 /**
  *  \brief Simplified version of clipboard_set_text_ex
@@ -209,7 +213,7 @@ bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, 
  *
  *  \details This function assumes LC_CLIPBOARD as the clipboard mode.
  */
-bool LCB_CC clipboard_set_text(clipboard_c *cb, const char *src);
+LCB_API bool LCB_CC clipboard_set_text(clipboard_c *cb, const char *src);
 
 #ifdef __cplusplus
 }
