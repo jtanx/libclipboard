@@ -6,7 +6,7 @@ set (SOURCE
      test_custom_allocators.cpp
 )
 set (HEADERS
-
+    libclipboard-test-private.h
 )
 
 # Add the target

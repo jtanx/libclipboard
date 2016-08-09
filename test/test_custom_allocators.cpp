@@ -16,12 +16,7 @@
 #include <atomic>
 #include <assert.h>
 
-#ifdef LIBCLIPBOARD_BUILD_X11
-#include <thread>
-#include <chrono>
-using std::this_thread::sleep_for;
-using std::chrono::milliseconds;
-#endif
+#include "libclipboard-test-private.h"
 
 struct {
     std::atomic<int> alloc_fail_count;
@@ -142,16 +137,13 @@ TEST_F(CustomAllocatorsTest, TestAllocationsMatchesFrees) {
 TEST_F(CustomAllocatorsTest, TestAllocationsMatchesFreesEx) {
     clipboard_c *cb1 = clipboard_new(NULL);
     clipboard_c *cb2 = clipboard_new(&std_mock);
+    char *text;
     ASSERT_TRUE(cb1 != NULL);
     ASSERT_TRUE(cb2 != NULL);
 
     ASSERT_TRUE(clipboard_set_text(cb1, "allocTest"));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    char *text = clipboard_text(cb2);
-    ASSERT_TRUE(text != NULL);
+    TRY_RUN_STRNE(clipboard_text(cb2), "allocTest", text);
+    ASSERT_STREQ("allocTest", text);
     mock_free(text);
 
     clipboard_free(cb1);

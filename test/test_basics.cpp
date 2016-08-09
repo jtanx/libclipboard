@@ -11,12 +11,7 @@
 #include <vector>
 #include <iostream>
 
-#ifdef LIBCLIPBOARD_BUILD_X11
-#include <thread>
-#include <chrono>
-using std::this_thread::sleep_for;
-using std::chrono::milliseconds;
-#endif
+#include "libclipboard-test-private.h"
 
 class BasicsTest : public ::testing::Test {
 };
@@ -54,23 +49,15 @@ TEST_F(BasicsTest, TestClearingClipboard) {
     clipboard_c *cb = clipboard_new(NULL);
 
     clipboard_set_text_ex(cb, "cleartest", -1, LC_CLIPBOARD);
+    /* Line below should have no effect */
     clipboard_clear(NULL, LC_CLIPBOARD);
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
+
     char *text = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
-    ASSERT_TRUE(text != NULL);
     ASSERT_STREQ("cleartest", text);
     free(text);
 
     clipboard_clear(cb, LC_CLIPBOARD);
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-
-    text = clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
+    TRY_RUN_NE(clipboard_text_ex(cb, NULL, LC_CLIPBOARD), NULL, text);
     ASSERT_TRUE(text == NULL);
 
     clipboard_free(cb);
@@ -93,11 +80,10 @@ TEST_F(BasicsTest, TestOwnership) {
 
     ASSERT_FALSE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "test2", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    ASSERT_FALSE(clipboard_has_ownership(cb1, LC_CLIPBOARD));
+
+    bool has_ownership;
+    TRY_RUN_EQ(clipboard_has_ownership(cb1, LC_CLIPBOARD), true, has_ownership);
+    ASSERT_FALSE(has_ownership);
     ASSERT_TRUE(clipboard_has_ownership(cb2, LC_CLIPBOARD));
 
     clipboard_free(cb2);
@@ -127,25 +113,19 @@ TEST_F(BasicsTest, TestSetTextEdgeCases) {
 TEST_F(BasicsTest, TestSetText) {
     clipboard_c *cb1 = clipboard_new(NULL);
     clipboard_c *cb2 = clipboard_new(NULL);
+    char *ret1, *ret2;
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
 
-    char *ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD), *ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "test", ret2);
     ASSERT_STREQ("test", ret1);
     ASSERT_STREQ("test", ret2);
     free(ret1);
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "string", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb1, NULL, LC_CLIPBOARD), "string", ret1);
     ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("string", ret1);
     ASSERT_STREQ("string", ret2);
@@ -153,12 +133,8 @@ TEST_F(BasicsTest, TestSetText) {
     free(ret2);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", 1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
     ret1 = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
-    ret2 = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "t", ret2);
     ASSERT_STREQ("t", ret1);
     ASSERT_STREQ("t", ret2);
     free(ret1);
@@ -179,10 +155,6 @@ TEST_F(BasicsTest, TestGetText) {
     ASSERT_TRUE(clipboard_text_ex(NULL, &length, LC_SELECTION) == NULL);
 
     clipboard_set_text_ex(cb1, "test", -1, LC_CLIPBOARD);
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("test", ret);
     free(ret);
@@ -192,12 +164,18 @@ TEST_F(BasicsTest, TestGetText) {
     ASSERT_EQ(static_cast<int>(strlen("test")), length);
     free(ret);
 
-    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, &length, LC_CLIPBOARD), "test", ret);
     ASSERT_STREQ("test", ret);
+    ASSERT_EQ(static_cast<int>(strlen("test")), length);
     free(ret);
 
     clipboard_set_text_ex(cb1, "test", 2, LC_CLIPBOARD);
     ret = clipboard_text_ex(cb1, &length, LC_CLIPBOARD);
+    ASSERT_STREQ("te", ret);
+    ASSERT_EQ(static_cast<int>(strlen("te")), length);
+    free(ret);
+
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, &length, LC_CLIPBOARD), "te", ret);
     ASSERT_STREQ("te", ret);
     ASSERT_EQ(static_cast<int>(strlen("te")), length);
     free(ret);
@@ -211,15 +189,11 @@ TEST_F(BasicsTest, TestUTF8InputOutput) {
     char *ret;
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "\xe6\x9c\xaa\xe6\x9d\xa5", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
     ret = clipboard_text_ex(cb1, NULL, LC_CLIPBOARD);
     ASSERT_STREQ("\xe6\x9c\xaa\xe6\x9d\xa5", ret);
     free(ret);
 
-    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "\xe6\x9c\xaa\xe6\x9d\xa5", ret);
     ASSERT_STREQ("\xe6\x9c\xaa\xe6\x9d\xa5", ret);
     free(ret);
 
@@ -232,29 +206,17 @@ TEST_F(BasicsTest, TestNewlines) {
     char *ret;
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "a\r\n b\r\n c\r\n", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "a\r\n b\r\n c\r\n", ret);
     ASSERT_STREQ("a\r\n b\r\n c\r\n", ret);
     free(ret);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "a\n b\n c\n", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "a\n b\n c\n", ret);
     ASSERT_STREQ("a\n b\n c\n", ret);
     free(ret);
 
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "a\r b\r c\r", -1, LC_CLIPBOARD));
-#ifdef LIBCLIPBOARD_BUILD_X11
-    /* Race condition on X11: SelectionClear/SelectionNotify event may come after */
-    sleep_for(milliseconds(100));
-#endif
-    ret = clipboard_text_ex(cb2, NULL, LC_CLIPBOARD);
+    TRY_RUN_STRNE(clipboard_text_ex(cb2, NULL, LC_CLIPBOARD), "a\r b\r c\r", ret);
     ASSERT_STREQ("a\r b\r c\r", ret);
     free(ret);
 
