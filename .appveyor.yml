@@ -18,11 +18,11 @@ install:
 build_script:
   - mkdir archives
 # msvc-x86-static
-  - call %MBASH% "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cmake . && cmake --build . --config Debug && cmake --build . --config Release"
+  - cmake . && cmake --build . --config Debug && cmake --build . --config Release
   - 7z a -t7z archives/msvc-static-libclipboard.7z include/ lib/ bin/
   - git clean -dxfe archives
 # msvc-x86-dynamic
-  - call %MBASH% "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; cmake -DLIBCLIPBOARD_USE_STDCALL=on -DBUILD_SHARED_LIBS=on . && cmake --build . --config Debug && cmake --build . --config Release"
+  - cmake -DLIBCLIPBOARD_USE_STDCALL=on -DBUILD_SHARED_LIBS=on . && cmake --build . --config Debug && cmake --build . --config Release
   - 7z a -t7z archives/msvc-dynamic-libclipboard.7z include/ lib/ bin/
   - git clean -dxfe archives
 # mingw-w64-i686
