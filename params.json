@@ -1,0 +1,6 @@
+{
+  "name": "Libclipboard",
+  "tagline": "Lightweight cross-platform clipboard library (experimental)",
+  "body": "libclipboard is a lightweight cross-platform (Windows, Linux/X11, OS X/Cocoa) clipboard library, with a pure C interface. It is written in pure C on Windows & X11. The Cocoa back-end is written in Objective C. Unit tests (optional) are written in C++ using the [Google Test](https://github.com/google/googletest) framework.\r\n\r\nIt has been designed to have as minimal dependencies as possible.\r\n\r\n### Support\r\nPost issues on the [issue tracker](https://github.com/jtanx/libclipboard/issues).\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
