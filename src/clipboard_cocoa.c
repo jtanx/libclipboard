@@ -39,7 +39,7 @@ LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     if (cb == NULL) {
         return NULL;
     }
-    LC_SET_ALLOCATORS(cb, cb_opts);
+    LCB_SET_ALLOCATORS(cb, cb_opts);
     cb->pb = [NSPasteboard generalPasteboard];
     return cb;
 }

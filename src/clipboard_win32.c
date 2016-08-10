@@ -85,10 +85,10 @@ LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     if (ret == NULL) {
         return NULL;
     }
-    LC_SET_ALLOCATORS(ret, cb_opts);
+    LCB_SET_ALLOCATORS(ret, cb_opts);
 
-    ret->max_retries = LC_WIN32_MAX_RETRIES_DEFAULT;
-    ret->retry_delay = LC_WIN32_RETRY_DELAY_DEFAULT;
+    ret->max_retries = LCB_WIN32_MAX_RETRIES_DEFAULT;
+    ret->retry_delay = LCB_WIN32_RETRY_DELAY_DEFAULT;
 
     if (cb_opts) {
         if (cb_opts->win32.max_retries > 0) {

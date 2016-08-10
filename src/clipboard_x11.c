@@ -101,7 +101,7 @@ struct clipboard_c {
     bool cond_initted;
 
     /** Selection data **/
-    selection_c selections[LC_MODE_END];
+    selection_c selections[LCB_MODE_END];
 
     /** malloc **/
     clipboard_malloc_fn malloc;
@@ -184,7 +184,7 @@ static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e)
         return;
     }
 
-    for (int i = 0; i < LC_MODE_END; i++) {
+    for (int i = 0; i < LCB_MODE_END; i++) {
         if (cb->selections[i].xmode == e->selection && (pthread_mutex_lock(&cb->mu) == 0)) {
             xcb_atom_t xmode = cb->selections[i].xmode;
             cb->free(cb->selections[i].data);
@@ -263,7 +263,7 @@ static void x11_retrieve_selection(clipboard_c *cb, xcb_selection_notify_event_t
 
     if (buf != NULL && (pthread_mutex_lock(&cb->mu) == 0)) {
         selection_c *sel = NULL;
-        for (int i = 0; i < LC_MODE_END; i++) {
+        for (int i = 0; i < LCB_MODE_END; i++) {
             if (cb->selections[i].xmode == e->property) {
                 sel = &cb->selections[i];
                 break;
@@ -322,7 +322,7 @@ static bool x11_transmit_selection(clipboard_c *cb, xcb_selection_request_event_
             return false;
         }
 
-        for (int i = 0; i < LC_MODE_END; i++) {
+        for (int i = 0; i < LCB_MODE_END; i++) {
             if (cb->selections[i].xmode == e->selection) {
                 sel = &cb->selections[i];
                 break;
@@ -413,8 +413,8 @@ static void *x11_event_loop(void *arg) {
 LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     clipboard_opts defaults = {
         .x11.display_name = NULL,
-        .x11.action_timeout = LC_X11_ACTION_TIMEOUT_DEFAULT,
-        .x11.transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT,
+        .x11.action_timeout = LCB_X11_ACTION_TIMEOUT_DEFAULT,
+        .x11.transfer_size = LCB_X11_TRANSFER_SIZE_DEFAULT,
     };
 
     if (cb_opts == NULL) {
@@ -426,14 +426,14 @@ LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
     if (cb == NULL) {
         return NULL;
     }
-    LC_SET_ALLOCATORS(cb, cb_opts);
+    LCB_SET_ALLOCATORS(cb, cb_opts);
 
     cb->action_timeout = cb_opts->x11.action_timeout > 0 ?
-                         cb_opts->x11.action_timeout : LC_X11_ACTION_TIMEOUT_DEFAULT;
+                         cb_opts->x11.action_timeout : LCB_X11_ACTION_TIMEOUT_DEFAULT;
     /* Round down to nearest multiple of 4 */
     cb->transfer_size = (cb_opts->x11.transfer_size / 4) * 4;
     if (cb->transfer_size == 0) {
-        cb->transfer_size = LC_X11_TRANSFER_SIZE_DEFAULT;
+        cb->transfer_size = LCB_X11_TRANSFER_SIZE_DEFAULT;
     }
 
     cb->mu_initted = pthread_mutex_init(&cb->mu, NULL) == 0;
@@ -463,8 +463,8 @@ LCB_API clipboard_c *LCB_CC clipboard_new(clipboard_opts *cb_opts) {
         return NULL;
     }
 
-    cb->selections[LC_CLIPBOARD].xmode = cb->std_atoms[X_ATOM_CLIPBOARD].atom;
-    cb->selections[LC_SELECTION].xmode = XCB_ATOM_PRIMARY;
+    cb->selections[LCB_CLIPBOARD].xmode = cb->std_atoms[X_ATOM_CLIPBOARD].atom;
+    cb->selections[LCB_SELECTION].xmode = XCB_ATOM_PRIMARY;
 
     /* Structure notify mask to get DestroyNotify messages */
     /* Property change mask for PropertyChange messages */
@@ -520,7 +520,7 @@ LCB_API void LCB_CC clipboard_free(clipboard_c *cb) {
     }
 
     /* Free selection data */
-    for (int i = 0; i < LC_MODE_END; i++) {
+    for (int i = 0; i < LCB_MODE_END; i++) {
         if (cb->selections[i].data != NULL) {
             cb->free(cb->selections[i].data);
         }
@@ -537,10 +537,10 @@ LCB_API void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
     xcb_atom_t sel;
 
     switch (mode) {
-        case LC_CLIPBOARD:
+        case LCB_CLIPBOARD:
             sel = cb->std_atoms[X_ATOM_CLIPBOARD].atom;
             break;
-        case LC_SELECTION:
+        case LCB_SELECTION:
             sel = XCB_ATOM_PRIMARY;
             break;
         default:
@@ -554,7 +554,7 @@ LCB_API void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
 LCB_API bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     bool ret = false;
 
-    if (mode != LC_CLIPBOARD && mode != LC_SELECTION) {
+    if (mode != LCB_CLIPBOARD && mode != LCB_SELECTION) {
         return false;
     }
 
@@ -590,7 +590,7 @@ static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **re
 LCB_API char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
-    if (cb == NULL || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {
+    if (cb == NULL || (mode != LCB_CLIPBOARD && mode != LCB_SELECTION)) {
         return NULL;
     }
 
@@ -649,7 +649,7 @@ LCB_API char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_m
 LCB_API bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     bool ret = false;
 
-    if (cb == NULL || src == NULL || length == 0 || (mode != LC_CLIPBOARD && mode != LC_SELECTION)) {
+    if (cb == NULL || src == NULL || length == 0 || (mode != LCB_CLIPBOARD && mode != LCB_SELECTION)) {
         return false;
     }
 

@@ -22,15 +22,14 @@
 #ifdef LIBCLIPBOARD_BUILD_X11
 #  include <thread>
 #  include <chrono>
-using std::this_thread::sleep_for;
-using std::chrono::milliseconds;
+#  include <iostream>
 
 #  define TRY_RUN(fn, ev, ret, oper) do { \
     ret = fn; \
     for (int i = 0; i < 10 && oper(ret, ev); i++) { \
-        std::cout << "Warning(test_basics.cpp:" TO_STRING(__LINE__) "): " TO_STRING(fn) " returned '" << \
+        std::cout << "Warning(at line:" TO_STRING(__LINE__) "): " TO_STRING(fn) " returned '" << \
             ret << "' trying again!" << std::endl; \
-        sleep_for(milliseconds(50)); \
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); \
         ret = fn; \
     } \
 } while (0)

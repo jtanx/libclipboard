@@ -7,9 +7,9 @@
 #include <stdlib.h>
 
 LCB_API char *LCB_CC clipboard_text(clipboard_c *cb) {
-    return clipboard_text_ex(cb, NULL, LC_CLIPBOARD);
+    return clipboard_text_ex(cb, NULL, LCB_CLIPBOARD);
 }
 
 LCB_API bool LCB_CC clipboard_set_text(clipboard_c *cb, const char *src) {
-    return clipboard_set_text_ex(cb, src, -1, LC_CLIPBOARD);
+    return clipboard_set_text_ex(cb, src, -1, LCB_CLIPBOARD);
 }

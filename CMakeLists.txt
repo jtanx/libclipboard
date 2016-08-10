@@ -37,7 +37,7 @@ if ((APPLE OR LIBCLIPBOARD_FORCE_COCOA) AND NOT (LIBCLIPBOARD_FORCE_WIN32 OR LIB
 endif()
 
 if (NOT (LIBCLIPBOARD_BUILD_WIN32 OR LIBCLIPBOARD_BUILD_X11 OR LIBCLIPBOARD_BUILD_COCOA))
-    message(FATAL_ERROR "Invalid build options. Can only specify one backen to be built.")
+    message(FATAL_ERROR "Invalid build options. Can only specify one backend to be built.")
 endif()
 
 # Set compiler flags

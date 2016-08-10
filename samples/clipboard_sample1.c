@@ -141,9 +141,9 @@ bool parse_mode(const char *name, const char *arg, app_opts *opts) {
     if (arg[2] == '\0') {
         return true;
     } else if (!strcmp(arg + 2, "=CLIPBOARD")) {
-        opts->mode = LC_CLIPBOARD;
+        opts->mode = LCB_CLIPBOARD;
     } else if (!strcmp(arg + 2, "=SELECTION")) {
-        opts->mode = LC_SELECTION;
+        opts->mode = LCB_SELECTION;
     } else {
         printf("Error: Unknown mode: %s\n", arg);
         help(name, true);

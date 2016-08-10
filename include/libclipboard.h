@@ -55,13 +55,13 @@ extern "C" {
 #endif
 
 /** Default action timeout of 1500ms **/
-#define LC_X11_ACTION_TIMEOUT_DEFAULT 1500
+#define LCB_X11_ACTION_TIMEOUT_DEFAULT 1500
 /** Default transfer size (X11 only), default 1MB (must be multiple of 4) **/
-#define LC_X11_TRANSFER_SIZE_DEFAULT  1048576
+#define LCB_X11_TRANSFER_SIZE_DEFAULT  1048576
 /** Default max number of retries to try to obtain clipboard lock **/
-#define LC_WIN32_MAX_RETRIES_DEFAULT 5
+#define LCB_WIN32_MAX_RETRIES_DEFAULT 5
 /** Default delay in ms between retries to obtain clipboard lock **/
-#define LC_WIN32_RETRY_DELAY_DEFAULT 5
+#define LCB_WIN32_RETRY_DELAY_DEFAULT 5
 
 /**
  *  \brief For internal use only. Initialises custom allocators.
@@ -69,7 +69,7 @@ extern "C" {
  *  \param [out] cb Clipboard context
  *  \param [in] opts Clipboard options
  */
-#define LC_SET_ALLOCATORS(cb, opts) do { \
+#define LCB_SET_ALLOCATORS(cb, opts) do { \
     (cb)->malloc = (opts) && (opts)->user_malloc_fn ? (opts)->user_malloc_fn : malloc; \
     (cb)->calloc = (opts) && (opts)->user_calloc_fn ? (opts)->user_calloc_fn : calloc; \
     (cb)->realloc = (opts) && (opts)->user_realloc_fn  ? (opts)->user_realloc_fn : realloc; \
@@ -90,11 +90,11 @@ typedef void (*clipboard_free_fn)(void *ptr);
  */
 typedef enum clipboard_mode {
     /** The primary (global) clipboard **/
-    LC_CLIPBOARD = 0,
+    LCB_CLIPBOARD = 0,
     /** The (global) mouse selection clipboard **/
-    LC_SELECTION,
+    LCB_SELECTION,
     /** Sentinel value for end of clipboard modes **/
-    LC_MODE_END
+    LCB_MODE_END
 } clipboard_mode;
 
 /**
@@ -193,7 +193,7 @@ LCB_API char *LCB_CC clipboard_text_ex(clipboard_c *cb, int *length, clipboard_m
  *  \param [in] cb The clipboard to retrieve from
  *  \return As per clipboard_text_ex.
  *
- *  \details This function assumes LC_CLIPBOARD as the clipboard mode.
+ *  \details This function assumes LCB_CLIPBOARD as the clipboard mode.
  */
 LCB_API char *LCB_CC clipboard_text(clipboard_c *cb);
 
@@ -219,7 +219,7 @@ LCB_API bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int 
  *  \param [in] src The UTF-8 encoded NULL terminated string to be set.
  *  \return true iff the clipboard was set (false on error)
  *
- *  \details This function assumes LC_CLIPBOARD as the clipboard mode.
+ *  \details This function assumes LCB_CLIPBOARD as the clipboard mode.
  */
 LCB_API bool LCB_CC clipboard_set_text(clipboard_c *cb, const char *src);
 
