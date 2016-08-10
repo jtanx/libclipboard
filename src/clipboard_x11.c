@@ -185,11 +185,13 @@ static void x11_clear_selection(clipboard_c *cb, xcb_selection_clear_event_t *e)
     }
 
     for (int i = 0; i < LCB_MODE_END; i++) {
-        if (cb->selections[i].xmode == e->selection && (pthread_mutex_lock(&cb->mu) == 0)) {
-            xcb_atom_t xmode = cb->selections[i].xmode;
-            cb->free(cb->selections[i].data);
-            memset(&cb->selections[i], 0, sizeof(selection_c));
-            cb->selections[i].xmode = xmode;
+        selection_c *sel = &cb->selections[i];
+        if (sel->xmode == e->selection && (pthread_mutex_lock(&cb->mu) == 0)) {
+            cb->free(sel->data);
+            sel->data = NULL;
+            sel->length = 0;
+            sel->has_ownership = false;
+            sel->target = XCB_NONE;
             pthread_mutex_unlock(&cb->mu);
             break;
         }

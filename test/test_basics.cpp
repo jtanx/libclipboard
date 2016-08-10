@@ -77,7 +77,16 @@ TEST_F(BasicsTest, TestOwnership) {
     ASSERT_TRUE(clipboard_set_text_ex(cb1, "test", -1, LCB_CLIPBOARD));
     ASSERT_TRUE(clipboard_has_ownership(cb1, LCB_CLIPBOARD));
 
+    char *ret;
     ASSERT_FALSE(clipboard_has_ownership(cb2, LCB_CLIPBOARD));
+    /*
+       The line below is present only for synchronisation purposes.
+       On X11, it may happen that cb2's set text call happens *before*
+       cb1's, meaning that the ownership would still belong to cb1.
+     */
+    TRY_RUN_EQ(clipboard_text_ex(cb2, NULL, LCB_CLIPBOARD), NULL, ret);
+    ASSERT_TRUE(ret != NULL);
+    free(ret);
     ASSERT_TRUE(clipboard_set_text_ex(cb2, "test2", -1, LCB_CLIPBOARD));
 
     bool has_ownership;
