@@ -71,7 +71,8 @@ elseif(LIBCLIPBOARD_BUILD_X11)
 endif()
 
 # Include directories
-include_directories(include)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/include")
 
 # Configure header
 configure_file("include/libclipboard-config.h.in" "include/libclipboard-config.h")
@@ -79,7 +80,7 @@ configure_file("include/libclipboard-config.h.in" "include/libclipboard-config.h
 # Source files
 set(HEADERS
     include/libclipboard.h
-    include/libclipboard-config.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/libclipboard-config.h
 )
 
 set(SOURCE
