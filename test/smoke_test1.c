@@ -21,7 +21,7 @@
 
 #include "libclipboard.h"
 
-#define N_ITER 500
+#define N_ITER 300
 
 int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
