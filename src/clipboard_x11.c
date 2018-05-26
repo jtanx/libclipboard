@@ -7,6 +7,8 @@
  *             See LICENSE for details.
  */
 
+#define _POSIX_C_SOURCE 199309L
+
 #include "libclipboard.h"
 
 #ifdef LIBCLIPBOARD_BUILD_X11
