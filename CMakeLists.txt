@@ -6,6 +6,7 @@ project(libclipboard)
 # Defines and options
 set(LIBCLIPBOARD_VERSION_MAJOR 1 CACHE STRING "libclipboard major version number")
 set(LIBCLIPBOARD_VERSION_MINOR 0 CACHE STRING "libclipboard minor version number")
+set(LIBCLIPBOARD_VERSION "${LIBCLIPBOARD_VERSION_MAJOR}.${LIBCLIPBOARD_VERSION_MINOR}" CACHE STRING "libclipboard version number")
 
 option(LIBCLIPBOARD_FORCE_WIN32 "Force building the Win32 backend (default:off)" OFF)
 option(LIBCLIPBOARD_FORCE_X11 "Force building the X11 backend (default:off)" OFF)
