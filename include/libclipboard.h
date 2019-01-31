@@ -85,6 +85,9 @@ typedef void *(*clipboard_realloc_fn)(void *ptr, size_t size);
 /** Custom free function signature **/
 typedef void (*clipboard_free_fn)(void *ptr);
 
+/** Required for backwards compatibility with newer versions of the clipboard_mode enum **/
+#define LCB_SELECTION LCB_PRIMARY
+
 /**
  *  Determines which clipboard is used in called functions.
  */
@@ -92,7 +95,9 @@ typedef enum clipboard_mode {
     /** The primary (global) clipboard **/
     LCB_CLIPBOARD = 0,
     /** The (global) mouse selection clipboard **/
-    LCB_SELECTION,
+    LCB_PRIMARY,
+    /** The largely unused (global) secondary selection clipboard **/
+    LCB_SECONDARY,
     /** Sentinel value for end of clipboard modes **/
     LCB_MODE_END
 } clipboard_mode;
