@@ -28,6 +28,8 @@
 #  undef gettimeofday
 #endif
 
+#define VALID_MODE(x) ((x) >= LCB_CLIPBOARD && (x) < LCB_MODE_END)
+
 /**
  *  Enumeration of standard X11 atom identifiers
  */
@@ -562,7 +564,7 @@ LCB_API void LCB_CC clipboard_clear(clipboard_c *cb, clipboard_mode mode) {
 LCB_API bool LCB_CC clipboard_has_ownership(clipboard_c *cb, clipboard_mode mode) {
     bool ret = false;
 
-    if (mode != LCB_CLIPBOARD && mode != LCB_PRIMARY && mode != LCB_SECONDARY) {
+    if (!VALID_MODE(mode)) {
         return false;
     }
 
@@ -598,7 +600,7 @@ static void retrieve_text_selection(clipboard_c *cb, selection_c *sel, char **re
 LCB_API char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_mode mode) {
     char *ret = NULL;
 
-    if (cb == NULL || (mode != LCB_CLIPBOARD && mode != LCB_PRIMARY && mode != LCB_SECONDARY)) {
+    if (cb == NULL || !VALID_MODE(mode)) {
         return NULL;
     }
 
@@ -657,7 +659,7 @@ LCB_API char LCB_CC *clipboard_text_ex(clipboard_c *cb, int *length, clipboard_m
 LCB_API bool LCB_CC clipboard_set_text_ex(clipboard_c *cb, const char *src, int length, clipboard_mode mode) {
     bool ret = false;
 
-    if (cb == NULL || src == NULL || length == 0 || (mode != LCB_CLIPBOARD && mode != LCB_PRIMARY && mode != LCB_SECONDARY)) {
+    if (cb == NULL || src == NULL || length == 0 || !VALID_MODE(mode)) {
         return false;
     }
 
