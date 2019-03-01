@@ -92,7 +92,11 @@ typedef enum clipboard_mode {
     /** The primary (global) clipboard **/
     LCB_CLIPBOARD = 0,
     /** The (global) mouse selection clipboard **/
-    LCB_SELECTION,
+    LCB_PRIMARY,
+    /** The (global) mouse selection clipboard; for backwards compatibility **/
+    LCB_SELECTION = LCB_PRIMARY,
+    /** The largely unused (global) secondary selection clipboard **/
+    LCB_SECONDARY,
     /** Sentinel value for end of clipboard modes **/
     LCB_MODE_END
 } clipboard_mode;

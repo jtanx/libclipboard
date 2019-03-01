@@ -16,6 +16,10 @@ add_executable (run-smoke1 smoke_test1.c)
 # Link it to gtest
 target_link_libraries(run-tests LINK_PRIVATE gtest gtest_main)
 
+if (BUILD_SHARED_LIBS)
+    target_compile_definitions(run-tests PRIVATE -DGTEST_LINKED_AS_SHARED_LIBRARY)
+endif()
+
 # Link it with libclipboard
 target_link_libraries (run-tests LINK_PUBLIC clipboard)
 target_link_libraries (run-smoke1 LINK_PUBLIC clipboard)
