@@ -121,7 +121,7 @@ struct clipboard_c {
  *  The standard atom names. These values should match the
  *  std_x_atoms enumeration.
  */
-const char const *g_std_atom_names[X_ATOM_END] = {
+const char * const g_std_atom_names[X_ATOM_END] = {
     "TARGETS", "MULTIPLE", "TIMESTAMP", "INCR",
     "CLIPBOARD", "UTF8_STRING",
 };
@@ -135,7 +135,7 @@ const char const *g_std_atom_names[X_ATOM_END] = {
  *  \param [in] number The number of atoms to intern.
  *  \return true iff all atoms were interned.
  */
-static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char const **atom_names, int number) {
+static bool x11_intern_atoms(xcb_connection_t *xc, atom_c *atoms, const char * const *atom_names, int number) {
     for (int i = 0; i < number; i++) {
         atoms[i].cookie = xcb_intern_atom(xc, 0,
                                           strlen(atom_names[i]), atom_names[i]);
